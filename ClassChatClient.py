@@ -6,8 +6,8 @@ import sys
 def receive_messages(sock: socket) -> None:
     while True:
         message = sock.recv(1024) #Receive server response
-            threading.Thread(target=receive_messages, args=(clientSocket,), daemon=True).start() #Start thread to receive server messages
-            threading.Lock() #Lock to keep main thread alive while receiving messages
+        threading.Thread(target=receive_messages, args=(clientSocket,), daemon=True).start() #Start thread to receive server messages
+        threading.Lock() #Lock to keep main thread alive while receiving messages
         if not message:
             print('Connection terminated by the server. Disconnecting...') #Print message if connection is closed by server
             sock.close() #Close Client Socket
