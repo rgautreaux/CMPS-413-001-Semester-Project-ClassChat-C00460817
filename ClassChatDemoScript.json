@@ -1,0 +1,6 @@
+{ 
+" s t a t u s " :  "1"  , 
+" s e n d e r " :  " A l i c e " , 
+" r e c e i v e r " :  " Bob " , 
+" t e x t " :  " Hi ,  do you know how TCP works ? " ,
+}

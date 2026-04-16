@@ -1,10 +1,12 @@
 from socket import socket, AF_INET, SOCK_STREAM
-serverName = 'ClassChatServer'
-serverPort = 12000
-clientSocket = socket(AF_INET, SOCK_STREAM)
-clientSocket.connect((serverName,serverPort))
-sentence = input('Input lowercase sentence:')
-clientSocket.send(sentence.encode())
-modifiedSentence = clientSocket.recv(1024)
-print('From Server: ', modifiedSentence.decode())
-clientSocket.close()
+serverName = 'localhost' #Server Name
+serverPort = 12000 #Port Number
+clientSocket = socket(AF_INET, SOCK_STREAM) #TCP Client Socket
+clientSocket.connect((serverName,serverPort)) #Socket Connection
+
+username = input('Input your Username:') #User/Client Input
+clientSocket.send(username.encode()) #Send input to server
+clientUsername = clientSocket.recv(1024) #Wait for and receive server response
+print('From ClassChat Server: ', clientUsername.decode()) #print server response
+
+clientSocket.close() #Close Client Socket
