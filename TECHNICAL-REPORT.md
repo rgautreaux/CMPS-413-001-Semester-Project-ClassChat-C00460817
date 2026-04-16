@@ -63,11 +63,24 @@ To make sure I was using the `select()` function correctly, I again turned to Gi
 
 From here it gave an example on how to properly implement the `select()` function for Windows, which I then used as a guide to adjust my implementation and fix these problems. From there I asked it one last time to be sure I had implemented the `select()` function correctly, and it confirmed that I had done so properly, with a minor adjustment suggestion on how to avoid double prompting.
 
-![alt text](image.png)
+From here, I ran the server and client to verify that the Client-Server communication would still work with these new changes, and that this Multiplexing method was working correctly as well. The below errors occured:
 
-From here, I ran the server and client to verify that the Client-Server communication would still work with these new changes, and that this Multiplexing method was working correctly as well. The resulting errors occured:
+![alt text](evidence-screenshots/S2_Server_Select_ERROR.png)
+![alt text](evidence-screenshots/S2_Client_Select_ERROR.png.png)
 
-![alt text](image-1.png) 
-![alt text](image-2.png)
 
-I then asked Github Copilot for assistance in diagnosing the source of these errors, and it identified that the issue was due to the fact that the `select()` function on Windows does not support monitoring standard input (keyboard input) directly. It recommended using a workaround by creating a separate thread to read user input and send it to the server, while the main thread continues to use `select()` to monitor the socket for incoming messages from the server.
+I then asked Github Copilot for assistance in diagnosing the source of these errors, and it identified that the issue was due to the fact that the `select()` function on Windows does not support monitoring standard input (keyboard input) directly. It recommended using a workaround by creating a separate thread to read user input and send it to the server, while the main thread continues to use `select()` to monitor the socket for incoming messages from the server. I used the provided example to implement this workaround. Once this change was made I reran the server and client to test:
+
+![alt text](evidence-screenshots/ServerTest.png)
+![alt text](evidence-screenshots/S2_Server_STOPPED.png)
+
+The server and client now worked when launched, though after the first message was sent from the client to the server, the client would not receive any responses from the server. I again turned to Github Copilot for assistance in diagnosing this issue. This was fixed using Copilot's suggestion to improve the server loop by adding a check for empty messages. This resolved the issue and allowed the client to properly receive messages from the server after sending a message.
+
+![alt text](evidence-screenshots/ServerTest.png)
+![alt text](evidence-screenshots/S2_Server_ResponseFIX.png)
+
+I updated the `TRANSCRIPT.md` file to document the exact usage of Github Copilot to help identify these issues and find their resolutions for full transparency.
+
+---
+
+## 3

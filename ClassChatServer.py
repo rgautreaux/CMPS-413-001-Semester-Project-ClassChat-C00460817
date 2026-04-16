@@ -6,11 +6,18 @@ serverSocket.listen(5) #Listens for Client Connection
 print('The ClassChat Server is ready.') #Print Message/Acknowledgement while waiting for client
 
 while True:
-    connectionSocket, addr = serverSocket.accept() #Accept Connections from Clients
-    username = connectionSocket.recv(1024).decode() #Wait for and receive incoming Client Message(s)
-    connectionSocket.send("ACK: Connection Established.".encode()) #Send ACK to Client
-    
-    input = connectionSocket.recv(1024).decode() #Receive Client Message(s)
-    connectionSocket.send(input.upper().encode()) #Send Modified Message to Client
+    connectionSocket, addr = serverSocket.accept()
+    welcome = connectionSocket.recv(1024).decode()
+    connectionSocket.send("ACK: Connection Established.".encode())
 
-connectionSocket.close() #Close Connection Socket
+    # Loop to handle multiple messages from the same client
+    while True:
+        data = connectionSocket.recv(1024)
+        if not data:
+            print("Client disconnected.")
+            break
+        message = data.decode()
+        print(f"Received from client: {message}")
+        connectionSocket.send(message.upper().encode())
+
+    connectionSocket.close()
