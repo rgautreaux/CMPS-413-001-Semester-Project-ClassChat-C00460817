@@ -12,4 +12,4 @@ This section will describe the process of implementing the first step of this se
 
 ### 1.1 Server Implementation
 
-Using the examples found in the textbook as a guide, I proceeded to create the `ClassChatClient.py` and `ClassChatServer.py` files for the server and client respectively.
+Using the examples found in the textbook as a guide, I proceeded to create the `ClassChatClient.py` and `ClassChatServer.py` files for the server and client respectively. When inputing the code samples from the textbook, the VSCode editor automatically converted the single quotes to curly quotes, which caused syntax errors. I had to change the curly quotes back to straight quotes in order for the code to run properly.  I also changed the basic server name into "ClassChatServer" to make it more specific to this project.
