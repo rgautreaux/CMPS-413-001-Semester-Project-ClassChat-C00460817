@@ -3,6 +3,8 @@
 The objective of this project is to design and develop an online chat system, named ClassChat, 
 to be used for communications and discussions among students in a class. This Technical Report provides an overview of the design and implementation of the ClassChat system, including the architecture, technologies used, and challenges faced during development.
 
+---
+
 ## 1 Client–Server Communication using TCP/IP (30 points)
 
 This section will describe the process of implementing the first step of this semester project: creating a client-server communication using TCP/IP. The server is intended to listen for incoming connections from clients, and clients will connect to the server to send and receive messages.
@@ -39,9 +41,18 @@ I did this and tried running the server and client again, and this time it worke
 
 I thus added an entry to the `TRANSCRIPT.md` file to document the exact usage of Github Copilot to help identify this issue and find its resolution for full transparency.
 
+---
+
 ## 2 Advanced Client (20 points)
 
 Now that the simple client-server communication system has been created and verified, it was time to move onto the next step of Advancing Client capabilities so that a client can both send and receive message at the 
-same time with less CPU workload. 
+same time with less CPU workload. I/O multiplexing was the suggested method of executing this task within the instructions, specifically to use system callback function to activate a client’s application if the socket receives data from the server or keyboard input from the user. 
 
-I/O multiplexing waws the suggested method of executing this task within the instructions, specifically to use system callback function to activate a client’s application if the socket receives data from the server or keyboard input from the user. Thus, I went back to the textbook chapter slides to review Multiplexing and how it worked.
+Thus, I went back to the textbook chapter slides to review Multiplexing and how it worked. These slides defined Multiplexing as a method to handle data from multiple sockets, add transport header (and later used for demultiplexing). Demultiplexing was defined as using header info to deliver these received segments to correct socket. Furthermore, the slides indicated that for a TCP server intended to support many 
+simultaneous TCP sockets if:
+- Each socket identified by its own 4-tuple (source IP address, source port number, dest IP address, dest port number)
+- Each socket associated with a different connecting client 
+
+For this Client-Server, I first thought that this 4-tuple would be ('localhost', 12000, 'localhost', 1200) for each client connection. The instructions also provided a list of the proper calls for multiplexing:  `select()`, `poll()` and `epoll()` in the Client. The textbook slides did not provide any examples of how to implement these calls, so I turned to Github Copilot for assistance in understanding what these functions were, how they were typically used, and which would be best depending on the desired scalability. I decided to use the recommended `select()` function, as it provided maximum portability and simplicity.
+
+I then added `import select` to the top of the `ClassChatClient.py` file, and proceeded to begin writing the `select()` function call into the Client.  As I was doing so, the VSCode editor identified syntax errors in the code, and automatically rewrote the command. I accepted the rewrite to resolve the syntax error.
