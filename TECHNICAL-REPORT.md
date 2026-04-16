@@ -3,7 +3,8 @@
 The objective of this project is to design and develop an online chat system, named ClassChat, 
 to be used for communications and discussions among students in a class. This Technical Report provides an overview of the design and implementation of the ClassChat system, including the architecture, technologies used, and challenges faced during development.
 
-## 1 Client–Server Communication using TCP/IP
+## 1 Client–Server Communication using TCP/IP (30 points)
+
 This section will describe the process of implementing the first step of this semester project: creating a client-server communication using TCP/IP. The server is intended to listen for incoming connections from clients, and clients will connect to the server to send and receive messages.
 
 ### 1.1 Server Implementation
@@ -37,3 +38,10 @@ I did this and tried running the server and client again, and this time it worke
 ![alt text](evidence-screenshots/ClientTest_FIXED.png)
 
 I thus added an entry to the `TRANSCRIPT.md` file to document the exact usage of Github Copilot to help identify this issue and find its resolution for full transparency.
+
+## 2 Advanced Client (20 points)
+
+Now that the simple client-server communication system has been created and verified, it was time to move onto the next step of Advancing Client capabilities so that a client can both send and receive message at the 
+same time with less CPU workload. 
+
+I/O multiplexing waws the suggested method of executing this task within the instructions, specifically to use system callback function to activate a client’s application if the socket receives data from the server or keyboard input from the user. Thus, I went back to the textbook chapter slides to review Multiplexing and how it worked.
