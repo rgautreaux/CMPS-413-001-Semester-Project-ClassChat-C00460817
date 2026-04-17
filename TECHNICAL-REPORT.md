@@ -109,3 +109,16 @@ I then updated the `TRANSCRIPT.md` file to document the exact usage of Github Co
 
 
 ---
+
+# 4  Client-Client Communication
+
+Now that Multi-Thread COmmunication was implemented and my test run was a success, it was time to move on to the Final Required Step of the project: Client-Client Communication.  The objective of this step, according to the instructions, was to implemetnt the following:
+
+1. Client management. 
+2.  Receive message from a sending client. 
+3.  Forward message to a receiving client.
+  
+As Multi-Thread Communication between multiple clients was already implemented and teste, I was unsure of what specific modifications to add for this step to improve the functionality and implement direct Client-to-Client communication. I started by asking Copilot for a general idea of what needed to be added or edited to fulfill these requirements. Copilot provided a list of what specific changes were necessary (a general overview with no example code), and I used this list to guide my manual implementation of these changes. First I tried to implement username to socket mapping for clients to be able to communicate directly and improve the existing client management.  The autofill suggestions from VSCode were very helpful in this step, as it corrected syntax errors/mistakes I made like trying to use `remove()` to remove logged out client usernames rather than `pop()`.  I then attempted to edit the codebase to send/recieve/forward messages in the JSON Format discussed in the instructions, and to implement the necessary checks to ensure that messages were being sent to the correct recipients. This was a bit tricky to figure out, but I did my best to implement this on my own using the knowledge I had gained so far.
+
+
+After this first implementation attempt, I asked Copilot to review my code and identify any issues.

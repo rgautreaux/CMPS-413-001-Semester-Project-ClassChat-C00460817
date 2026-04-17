@@ -1,16 +1,18 @@
 from socket import socket, AF_INET, SOCK_STREAM
 import threading
 import sys
+import json
 
 #Server Message Receiving Thread
 def receive_messages(sock: socket) -> None:
     while True:
         message = sock.recv(1024) #Receive server response
+        message_parse = json.loads(message.decode()) # Attempt to parse the message as JSON 
         if not message:
             print('\n[System] Connection terminated by the server. Disconnecting...')
             sock.close()
             sys.exit()
-        print(f'\n{message.decode()}\n> ', end='', flush=True)  # Add newline and prompt
+        print(f'\n{message_parse["content"]}\n> ', end='', flush=True)  # Add newline and prompt
 
 serverName = 'localhost' #Server Name
 serverPort = 12000 #Port Number
@@ -32,4 +34,4 @@ while True:
         print("[System] Disconnecting from server...")
         clientSocket.close()
         sys.exit()
-    clientSocket.send(message.encode()) #Send message to server
+    clientSocket.send(json.dumps({"status": "sender", "receiver": message}).encode()) #Send JSON message to server
