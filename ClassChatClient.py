@@ -14,18 +14,27 @@ def receive_messages(sock: socket) -> None:
 
         try:
             incoming_message = json.loads(message.decode()) #Attempt to parse the incoming message as JSON
-            if incoming_message.get("status") == "ACK": #If the message is an acknowledgment
-                print(f'\n[System] {incoming_message.get("message")}\n> ', end='', flush=True) #Print the acknowledgment message from the server
-            elif incoming_message.get("status") == "error": #If the message is an error message
-                print(f'\n[Error] {incoming_message.get("text")}\n> ', end='', flush=True) #Print the error message from the server
-            elif incoming_message.get("status") == "info":
-                print(f"\n[Info] {incoming_message.get('text')}\n> ", end='', flush=True) #If the message is an informational message (such as a new user logging on ), print it
+            status = incoming_message.get("status")
+            # Print each message on its own line, with clear prefixes
+            if status == "ACK":
+                print(f'\n[System] {incoming_message.get("message")}')
+            elif status == "error":
+                print(f'\n[Error] {incoming_message.get("text")}')
+            elif status == "info":
+                # Only print non-empty info messages
+                info_text = incoming_message.get("text", "").strip()
+                if info_text:
+                    print(f'\n[Info] {info_text}')
             else:
-                print(f'\n{incoming_message.get("sender")}: {incoming_message.get("text")}\n> ', end='', flush=True) #If the message is a regular chat message, print the sender and the text of the message
+                # Regular chat message
+                sender = incoming_message.get("sender", "Unknown")
+                text = incoming_message.get("text", "")
+                print(f'\n{sender}: {text}')
+            print("> ", end='', flush=True) # Always print prompt after message
         except Exception:
-            print(f'\n{message.decode()}\n> ', end='', flush=True) #If the message cannot be parsed as JSON, print it as a regular message from the server
-
-
+            # If the message cannot be parsed as JSON, print it as a regular message from the server
+            print(f'\n{message.decode()}')
+            print("> ", end='', flush=True)
 
 serverName = 'localhost' #Server Name
 serverPort = 12000 #Port Number

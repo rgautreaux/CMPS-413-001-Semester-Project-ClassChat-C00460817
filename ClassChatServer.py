@@ -49,8 +49,9 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                 #Direct Message for intended recipient
                 if receiver in client_dictionary:
                     try:
-                        client_dictionary[receiver].send(message) # Send the message to the intended recipient
-                        print(f"Received from {username}@{addr}: {message_parse['sender']}: {message_parse['text']}") # Log the message received from the client
+                        # Always send JSON-encoded bytes
+                        client_dictionary[receiver].send(json.dumps(message_parse).encode())
+                        print(f"Received from {username}@{addr}: {message_parse['sender']}: {message_parse['text']}")
                     except Exception:
                         pass
                 else:

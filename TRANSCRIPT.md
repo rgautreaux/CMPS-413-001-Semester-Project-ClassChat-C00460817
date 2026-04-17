@@ -1594,3 +1594,113 @@ With these changes, your chat will look much cleaner and be easier to follow for
 
 ---
 
+# 4 Client-Client Communication Implementation, Debugging, and Testing
+
+Your code is functionally correct, but the **cluttered output** is due to multiple JSON system/info messages being printed in a row, and sometimes as raw JSON rather than as clear, user-friendly lines. This is especially visible when a client connects and receives several info/ACK messages at once.
+
+### **How to Clean Up the Output**
+
+#### **1. Client: Print Each Message on Its Own Line, With Clear Prefixes**
+
+- In your `receive_messages` function, you already distinguish between `"status"` values.  
+- **Make sure you print only the relevant field, not the whole JSON.**
+- **Add a blank line before each new message for clarity.**
+- **For info/ACK/error, use clear prefixes.**
+- **For chat messages, use the format:**  
+  ```
+  <sender>: <text>
+  ```
+
+#### **2. Client: Ignore Empty or Redundant Messages**
+
+- Sometimes, the server may send empty or redundant messages (e.g., multiple info lines in a row).  
+- You can skip printing empty lines or filter out repeated system prompts if desired.
+
+---
+
+### **Example: Improved Client Message Display**
+
+Replace your `receive_messages` function with the following (all your comments are preserved):
+
+```python
+def receive_messages(sock: socket) -> None:
+    while True:
+        message = sock.recv(1024) #Receive server response
+        if not message: #If the server has closed, exit loop and close the socket
+            print('\n[System] Connection terminated by the server. Disconnecting...')
+            sock.close()
+            sys.exit()
+
+        try:
+            incoming_message = json.loads(message.decode()) #Attempt to parse the incoming message as JSON
+            status = incoming_message.get("status")
+            # Print each message on its own line, with clear prefixes
+            if status == "ACK":
+                print(f'\n[System] {incoming_message.get("message")}')
+            elif status == "error":
+                print(f'\n[Error] {incoming_message.get("text")}')
+            elif status == "info":
+                # Only print non-empty info messages
+                info_text = incoming_message.get("text", "").strip()
+                if info_text:
+                    print(f'\n[Info] {info_text}')
+            else:
+                # Regular chat message
+                sender = incoming_message.get("sender", "Unknown")
+                text = incoming_message.get("text", "")
+                print(f'\n{sender}: {text}')
+            print("> ", end='', flush=True) # Always print prompt after message
+        except Exception:
+            # If the message cannot be parsed as JSON, print it as a regular message from the server
+            print(f'\n{message.decode()}')
+            print("> ", end='', flush=True)
+```
+
+---
+
+### **3. (Optional) Server: Send Only One Info Message Per Line**
+
+- If you want to further reduce clutter, you can combine multiple info messages into one before sending, or add a short delay between them.  
+- However, the main improvement comes from the client-side formatting above.
+
+---
+
+### **4. (Optional) Add Separators for Group vs. Direct Messages**
+
+- For group messages, you could add a prefix like `[Group]` or `[Direct]` for clarity, but this is optional.
+
+---
+
+## **Summary Table**
+
+| Issue                  | Solution                                      |
+|------------------------|-----------------------------------------------|
+| Multiple JSONs in row  | Print each message on its own line, with prefix |
+| Raw JSON output        | Only print relevant fields, not whole JSON    |
+| Prompt clutter         | Print prompt only once after each message     |
+| Info message spam      | Skip empty/redundant info messages            |
+
+---
+
+## **Result**
+
+With these changes, your client output will look like:
+
+```
+[Info] Welcome to ClassChat, Alice!
+[System] Connection Established.
+[Info] To message a specific user, type '@username message'. To message all users, just type your message.
+[Info] Type 'exit' to disconnect from the server.
+> 
+[Info] Bob has joined the chat.
+> 
+Bob: Hi, do you know how TCP works?
+> 
+```
+
+**This will make your chat output much more readable and user-friendly.**
+
+If you want a full, ready-to-paste client file with these improvements, just ask!
+
+---
+

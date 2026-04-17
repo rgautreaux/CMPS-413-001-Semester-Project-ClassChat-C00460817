@@ -17,27 +17,27 @@ Using the examples found in the textbook as a guide, I proceeded to create the `
 
 When starting this step, I realized I had accidentally put the Client code into the Server file, and fixed this mistake. I then followed the same process for the client implementation, using the example in the textbook slides as a guide, and referring to it when writing the file contents.  Once both the Server and Client files were created, VSCode identified syntax errors in the code, specifically a Wildcard import error due to the `from socket import *` line from the textbook slide example at the top of both files. 
 
-![alt text](/evidence-screenshots/import_problem.png)
+![alt text](evidence-screenshots/S1_import_problem.png)
 
 The VSCode error flag provided the following link, which broke down the error and how to resolve it:
 https://github.com/microsoft/pylance-release/blob/main/docs/diagnostics/reportWildcardImportFromLibrary.md
 
 I used this guidance to change the import statement to `from socket import socket, AF_INET, SOCK_STREAM`, based on the `(server/client)Socket = socket(AF_INET,SOCK_STREAM)` calls later on in these files. This change resolved the syntax error and allowed me to proceed with the implementation of the client-server communication.
 
-![alt text](/evidence-screenshots/import_error_fix.png)
+![alt text](evidence-screenshots/S1_import_problem.png)
 
 ### 1.3 Requirements  
 
 The Client-Server pair are now created, with no remaining errors recognized by the VSCode editor. I adjusted the names of some variables to specifically fit the project, and not the template/example that I based the code on.Before proceeding into the next step of this project and implementing the Advanced Client requirements, I ran the server and client files to verify that their basic TCP/IP communication worked. 
 
-![alt text](evidence-screenshots/ServerTest.png)
-![alt text](evidence-screenshots/ClientTest_ERROR.png)
+![alt text](evidence-screenshots/S1_ServerTest.png)
+![alt text](evidence-screenshots/S1_ClientTest_ERROR.png)
 
 The Server launched and listened for clients as designed, but an error occurred when the Client attempted to connect.  I was unsure of the cause for this error, and asked Github Copilot for assistance in diagnosing the source of the issue. It stated that the reason for this problem was due to the `servername` variable not being a valid hostname or address, recommending I change it to `localhost`.  In hindsight, this was a very simple mistake that I should have caught myself, but I had been so focused on following the textbook example and getting the code to run that I overlooked this detail.
 
 I did this and tried running the server and client again, and this time it worked. I was able to enter a username and receive a response from the server, confirming that the TCP/IP communication was successfully established between the client and server.
 
-![alt text](evidence-screenshots/ClientTest_FIXED.png)
+![alt text](evidence-screenshots/S1_ClientTest_FIXED.png)
 
 I thus added an entry to the `TRANSCRIPT.md` file to document the exact usage of Github Copilot to help identify this issue and find its resolution for full transparency.
 
@@ -71,12 +71,12 @@ From here, I ran the server and client to verify that the Client-Server communic
 
 I then asked Github Copilot for assistance in diagnosing the source of these errors, and it identified that the issue was due to the fact that the `select()` function on Windows does not support monitoring standard input (keyboard input) directly. It recommended using a workaround by creating a separate thread to read user input and send it to the server, while the main thread continues to use `select()` to monitor the socket for incoming messages from the server. I used the provided example to implement this workaround. Once this change was made I reran the server and client to test:
 
-![alt text](evidence-screenshots/ServerTest.png)
+![alt text](evidence-screenshots/S1_ServerTest.png)
 ![alt text](evidence-screenshots/S2_Server_STOPPED.png)
 
 The server and client now worked when launched, though after the first message was sent from the client to the server, the client would not receive any responses from the server. I again turned to Github Copilot for assistance in diagnosing this issue. This was fixed using Copilot's suggestion to improve the server loop by adding a check for empty messages. This resolved the issue and allowed the client to properly receive messages from the server after sending a message.
 
-![alt text](evidence-screenshots/ServerTest.png)
+![alt text](evidence-screenshots/S1_ServerTest.png)
 ![alt text](evidence-screenshots/S2_Server_ResponseFIX.png)
 
 I updated the `TRANSCRIPT.md` file to document the exact usage of Github Copilot to help identify these issues and find their resolutions for full transparency.
@@ -121,4 +121,22 @@ Now that Multi-Thread COmmunication was implemented and my test run was a succes
 As Multi-Thread Communication between multiple clients was already implemented and teste, I was unsure of what specific modifications to add for this step to improve the functionality and implement direct Client-to-Client communication. I started by asking Copilot for a general idea of what needed to be added or edited to fulfill these requirements. Copilot provided a list of what specific changes were necessary (a general overview with no example code), and I used this list to guide my manual implementation of these changes. First I tried to implement username to socket mapping for clients to be able to communicate directly and improve the existing client management.  The autofill suggestions from VSCode were very helpful in this step, as it corrected syntax errors/mistakes I made like trying to use `remove()` to remove logged out client usernames rather than `pop()`.  I then attempted to edit the codebase to send/recieve/forward messages in the JSON Format discussed in the instructions, and to implement the necessary checks to ensure that messages were being sent to the correct recipients. This was a bit tricky to figure out, but I did my best to implement this on my own using the knowledge I had gained so far.
 
 
-After this first implementation attempt, I asked Copilot to review my code and identify any issues. While I succeeded in having the Server recieve and parse JSONs and broadcast messages to all clients, the direct messaging features and proper formatting for client prompts and server sending were not properly implemented. I then used Copilot's analysis to adjust my implementation and fix these problems manually again. After a second review by Copilot, I went through each issue it identified and asked it for specific guidance on how to fix each one. I then used this guidance/examples to make the necessary manual adjustments to my implementation. I used the examples as references to manually adjust my code, and did not copy and paste any of the provided code directly into my files. Only when errors still persisted after my manual adjustments did I allow the Editor to make any changes, and only for the specific sections that were still causing errors after my manual adjustments.
+After this first implementation attempt, I asked Copilot to review my code and identify any issues. While I succeeded in having the Server recieve and parse JSONs and broadcast messages to all clients, the direct messaging features and proper formatting for client prompts and server sending were not properly implemented. I then used Copilot's analysis to adjust my implementation and fix these problems manually again. After a second review by Copilot, I went through each issue it identified and asked it for specific guidance on how to fix each one. I then used this guidance/examples to make the necessary manual adjustments to my implementation. I used the examples as references to manually adjust my code, and did not copy and paste any of the provided code directly into my files. Only when errors still persisted after my manual adjustments did I allow the Editor to make any changes, and only for the specific sections that were still causing errors after my manual adjustments. When all errors were resolved I performed a test based on the example provided in the instructions to verify that the Client-Client communication was working properly. Below are screenshots of the testing of this feature:
+
+![alt text](evidence-screenshots/S4_Test1a.png)
+![alt text](evidence-screenshots/S4_Test1b.png)
+
+After consulting with GitHub Copilot, I made some formatting adjustments to the server's message sending and the client's message receiving to improve readability and clarity. I tested it again, this time with a third client to make sure that no other user was recieving messages intended for other users. Below are screenshots of the updated testing results:
+
+![alt text](evidence-screenshots/S4_Test2a.png)
+![alt text](evidence-screenshots/S4_Test2b.png)
+![alt text](evidence-screenshots/S4_Test2c.png)
+
+
+Seeing how this test was a success, I updated the `TRANSCRIPT.md` file to document the exact usage of Github Copilot to help identify these issues and find their resolutions for full transparency.
+
+---
+
+# 5 Bonus Section
+
+Even though this portion of the assignment was not mandatory to complete, I wanted to try implementing the Bonus Section of the project to further challenge myself and expand my knowledge/skills to get a better understanding on how to apply the skills we have been learning in class.
