@@ -561,3 +561,1036 @@ while True:
 Let me know if you want a full code snippet with this feature!
 
 ---
+
+# 3 Multi-Thread Communication Implementation for Multiple Clients (Planning and Corrections)
+
+User: Analyze the codebase and identify if continuing to use Treading or creating a socketserver model is the best course of action for  implementing Multi-Thread Communication  so that multiple clients can message each other
+
+GitHub Copilot: To determine whether to continue using manual threading or to switch to a `socketserver`-based model for implementing multi-threaded communication in your ClassChat project, let's analyze both approaches in the context of your requirements:
+
+### 1. Manual Threading (Current Approach)
+- **How it works:** You create a new thread for each client connection manually, typically using Python's `threading.Thread`.
+- **Pros:**
+  - Full control over thread lifecycle and client handling logic.
+  - Easy to customize for advanced features (e.g., broadcasting, custom authentication, logging).
+  - Already partially implemented in your project, so less refactoring needed.
+- **Cons:**
+  - More boilerplate code (thread management, error handling).
+  - Slightly more complex to maintain as the number of features grows.
+  - Risk of subtle bugs (e.g., race conditions) if not careful with shared resources.
+
+### 2. Python’s `socketserver.ThreadingMixIn` (socketserver model)
+- **How it works:** You subclass `socketserver.ThreadingMixIn` and `socketserver.TCPServer`, and define a handler for client connections. The server automatically spawns a new thread for each client.
+- **Pros:**
+  - Less boilerplate: thread management is handled for you.
+  - Built-in structure for request handling.
+  - Easier to maintain for simple chat servers.
+- **Cons:**
+  - Less flexibility for advanced features (e.g., broadcasting to all clients requires extra work).
+  - May require refactoring your current server code to fit the handler-based model.
+  - Not as commonly used for chat servers that require persistent connections and message broadcasting.
+
+### Chat Server Requirements
+For a chat server where multiple clients can message each other (i.e., broadcast messages to all connected clients), you need:
+- A way to keep track of all connected clients.
+- A mechanism to broadcast messages from one client to all others.
+- Thread-safe handling of shared resources (like the client list).
+
+### Recommendation
+- **If your server is already using manual threading and you have working code for tracking clients and broadcasting messages, it is reasonable to continue with manual threading.** This gives you maximum flexibility and aligns with typical chat server implementations.
+- **If you want to reduce boilerplate and your server logic is simple (one request per connection, no persistent state), `socketserver.ThreadingMixIn` can be used.** However, for a chat server with persistent connections and broadcasting, you will still need to manage a shared client list and thread safety yourself.
+
+### Summary Table
+
+| Feature/Need                | Manual Threading | socketserver.ThreadingMixIn |
+|-----------------------------|------------------|-----------------------------|
+| Fine-grained control        | Yes              | Limited                     |
+| Built-in thread management  | No               | Yes                         |
+| Easy broadcasting           | Yes              | Needs extra work            |
+| Less boilerplate            | No               | Yes                         |
+| Fits chat server pattern    | Yes              | Possible, but less common   |
+
+### Conclusion
+**Continue with manual threading** for your chat server, as it provides the flexibility and control needed for features like message broadcasting and persistent client connections. If you want to experiment with `socketserver`, it can work, but you will still need to implement the core chat logic (broadcasting, client management) yourself.
+
+If you want, I can show you how to adapt your code to either model or provide a sample implementation for comparison. Let me know how you’d like to proceed!
+
+User: What steps must be taken to implement Multi-Thread Communication so that multiple clients can message each other and communicate?
+
+GitHub Copilot: ## Plan: Multi-Threaded Chat Server for Multiple Clients
+
+To implement multi-threaded communication so that multiple clients can message each other, follow these steps:
+
+**Steps**
+
+### Phase 1: Server Preparation
+1. **Import Required Modules**
+   - Use `socket` for networking and `threading` for concurrency.
+2. **Initialize Server Socket**
+   - Create a TCP socket, bind to a host/port, and listen for incoming connections.
+
+### Phase 2: Client Management
+3. **Maintain a List of Connected Clients**
+   - Use a shared list (e.g., `clients = []`) to keep track of all active client sockets.
+   - Protect this list with a lock (`threading.Lock`) for thread safety.
+
+### Phase 3: Connection Handling
+4. **Accept Connections in Main Thread**
+   - In a loop, accept new client connections.
+   - For each connection, start a new thread to handle communication with that client.
+
+5. **Client Handler Thread**
+   - Each thread listens for messages from its client.
+   - When a message is received, broadcast it to all other connected clients.
+
+### Phase 4: Broadcasting Messages
+6. **Broadcast Function**
+   - Implement a function to send a message to all clients except the sender.
+   - Handle client disconnects gracefully (remove from list, close socket).
+
+### Phase 5: Cleanup and Robustness
+7. **Handle Client Disconnects**
+   - Remove disconnected clients from the list.
+   - Ensure server continues running if a client disconnects or errors occur.
+
+**Relevant files**
+- ClassChatServer.py — Main server logic, threading, broadcasting
+- ClassChatClient.py — Client logic (no threading needed unless for input/output multiplexing)
+
+**Verification**
+1. Start the server and multiple clients.
+2. Send messages from one client and verify all others receive them.
+3. Disconnect a client and ensure the server and other clients continue functioning.
+4. Test with multiple simultaneous messages.
+
+**Decisions**
+- Manual threading is used for flexibility and control.
+- Broadcasting is implemented server-side.
+- Shared client list is protected with a lock for thread safety.
+
+**Further Considerations**
+1. For advanced features (usernames, private messages), extend the protocol and handler logic.
+2. For large numbers of clients, consider async or multiprocessing models.
+
+Would you like a sample code outline for these steps?
+
+User: Analyze the codebase and answer these questions:
+
+- How much of the current implementation of this plan is correct? If not, how can it be fixed?
+- How much of this plan remains? What features have not been implemented?
+
+GitHub Copilot: Here’s a detailed analysis of your current implementation for a multi-threaded chat server, based on the plan outlined earlier:
+
+---
+
+## 1. How much of the current implementation is correct?
+
+### What’s Correct:
+- **Socket Setup:** Both server and client correctly use TCP sockets and connect on the same port.
+- **Threading Used:** Both server and client use threading to handle concurrent operations (server: for clients, client: for receiving messages).
+- **Client List:** The server maintains a `clients` list to track connected clients.
+- **Basic Communication:** The server and client can send and receive messages.
+
+### What Needs Fixing:
+
+#### Server (ClassChatServer.py):
+- **Threading Implementation:**
+  - The function `handle_client` is referenced but not defined. The main server loop tries to start a thread with this function, but it does not exist.
+  - The code for handling each client (receiving, broadcasting, disconnecting) is written inside the main server loop, not in a separate handler function/thread.
+- **Broadcasting:**
+  - The `broadcast_message` function is defined inside the main loop, but it is never called. Messages are only echoed back to the sender, not broadcast to all clients.
+- **Thread/Lock Usage:**
+  - `threading.Lock(newthread)` is incorrect usage; `Lock` is for synchronizing access to shared resources, not for keeping threads alive.
+  - Unnecessary calls to `threading.Thread()` and `threading.Lock()` inside the message loop.
+- **Thread Management:**
+  - The `threads` list is not needed unless you plan to join threads later (which is not shown).
+- **Client Disconnect Handling:**
+  - The code attempts to remove `newthread` from `threads` on disconnect, but `newthread` is the result of `.start()` (which is always `None`), so this will fail.
+
+#### Client (ClassChatClient.py):
+- **Thread/Lock Usage:**
+  - `threading.Lock()` is called but not used for any synchronization.
+  - The receive thread is started twice (once inside the function, once in the main code).
+- **Message Handling:**
+  - The client can send and receive messages, but the server only echoes messages back, so clients do not see messages from other clients.
+
+---
+
+## 2. What remains to be implemented? What features are missing?
+
+### Features Not Yet Implemented:
+
+1. **Proper Client Handler Function (Server):**
+   - You need a `handle_client` function that runs in its own thread for each client. This function should:
+     - Receive messages from its client.
+     - Call `broadcast_message` to send the message to all other clients.
+     - Handle client disconnects and remove the client from the `clients` list.
+
+2. **Broadcasting Messages (Server):**
+   - When a client sends a message, the server should broadcast it to all other connected clients (not just echo it back).
+
+3. **Thread Safety:**
+   - Access to the `clients` list should be protected with a `threading.Lock` to avoid race conditions when adding/removing clients.
+
+4. **Cleaner Thread Management:**
+   - Remove unnecessary `threading.Lock()` and `threading.Thread()` calls that do not serve a purpose.
+
+5. **Optional Enhancements:**
+   - Handle client usernames and display them with messages.
+   - Graceful shutdown of server and clients.
+
+---
+
+## Summary Table
+
+| Feature/Step                        | Status         | Notes                                                      |
+|------------------------------------- |--------------- |------------------------------------------------------------|
+| TCP socket setup                     | Implemented    | Works as expected                                          |
+| Thread per client (server)           | Incorrect      | Needs a proper `handle_client` function                    |
+| Client list management               | Partially      | List exists, but not thread-safe, and not used for broadcast|
+| Broadcasting messages                | Not implemented| Function exists but is never called                        |
+| Thread safety (locks)                | Not implemented| Locks are present but not used correctly                   |
+| Client disconnect handling           | Partially      | Some logic present, but not robust                         |
+| Client message receiving thread      | Implemented    | Works, but thread/lock usage is messy                      |
+
+---
+
+## Next Steps
+
+- Refactor the server to define and use a `handle_client` function for each client thread.
+- Move the message receiving and broadcasting logic into this handler.
+- Use a lock to protect the `clients` list.
+- Call `broadcast_message` when a message is received from a client.
+- Clean up unnecessary thread/lock usage in both server and client.
+
+Would you like a sample refactored server code outline to illustrate these changes?
+
+User: Analyze the codebase and answer these questions:
+
+- How much of the current implementation of this plan is correct? If not, how can it be fixed?
+- How much of this plan remains? What features have not been implemented?
+
+GitHub Copilot: Here’s a detailed analysis of your current implementation for a multi-threaded chat server and client, based on your plan:
+
+---
+
+## 1. How much of the current implementation is correct? If not, how can it be fixed?
+
+### What’s Correct
+
+- **Socket Setup:** Both server and client use TCP sockets and connect on the same port.
+- **Threading Used:** Both server and client use threading to handle concurrent operations (server: for clients, client: for receiving messages).
+- **Client List:** The server maintains a `clients` list to track connected clients.
+- **Basic Communication:** The server and client can send and receive messages.
+
+### What Needs Fixing
+
+#### Server (ClassChatServer.py)
+
+- **Threading Implementation:**
+  - The `handle_client` function is defined, but it is not used correctly. The main server loop both starts a thread with this function and then continues to handle the same client in the main thread, causing duplicate handling.
+  - The `broadcast_message` function is defined inside `handle_client`, but it is also called from outside, which will cause a `NameError`.
+  - The `thread` list is used to track threads, but the code tries to remove `newthread` (the thread object) from it inside `handle_client`, where `newthread` is not defined.
+  - The server attempts to handle client messages both in the main loop and in the thread, which is redundant and error-prone.
+- **Broadcasting:**
+  - The server only broadcasts join/leave notifications, not actual chat messages. When a client sends a message, it is not broadcast to other clients.
+- **Thread Safety:**
+  - The `clients` list is not protected by a lock, so concurrent modifications could cause issues.
+- **Client Disconnect Handling:**
+  - The code attempts to remove the thread from the `thread` list, but this is not robust and may cause errors.
+- **Code Structure:**
+  - The server logic is split between the main loop and the handler, which is not ideal. All per-client logic should be in the handler thread.
+
+#### Client (ClassChatClient.py)
+
+- **Thread/Lock Usage:**
+  - The receive thread is started inside itself, causing infinite thread spawning (see line inside `receive_messages`).
+  - `threading.Lock()` is called but not used for any synchronization.
+- **Message Handling:**
+  - The client can send and receive messages, but the server only echoes messages back, so clients do not see messages from other clients.
+
+---
+
+## 2. How much of this plan remains? What features have not been implemented?
+
+### Features Not Yet Implemented or Incomplete
+
+1. **Proper Client Handler Function (Server):**
+   - The server should have a `handle_client` function that runs in its own thread for each client. All per-client logic (receiving, broadcasting, disconnecting) should be in this function.
+2. **Broadcasting Messages (Server):**
+   - When a client sends a message, the server should broadcast it to all other connected clients (not just echo it back or send notifications).
+3. **Thread Safety:**
+   - Access to the `clients` list should be protected with a `threading.Lock` to avoid race conditions when adding/removing clients.
+4. **Cleaner Thread Management:**
+   - Remove unnecessary `threading.Lock()` and `threading.Thread()` calls that do not serve a purpose.
+5. **Client Disconnect Handling:**
+   - Ensure that when a client disconnects, it is removed from the `clients` list and all resources are cleaned up.
+6. **Client Code Cleanup:**
+   - The client should only start the receive thread once, and should not use unnecessary locks.
+
+---
+
+## Summary Table
+
+| Feature/Step                        | Status         | Notes                                                      |
+|------------------------------------- |--------------- |------------------------------------------------------------|
+| TCP socket setup                     | Implemented    | Works as expected                                          |
+| Thread per client (server)           | Incorrect      | Needs a proper `handle_client` function and usage          |
+| Client list management               | Partially      | List exists, but not thread-safe, and not used for broadcast|
+| Broadcasting messages                | Not implemented| Only join/leave notifications are broadcast                |
+| Thread safety (locks)                | Not implemented| Locks are present but not used correctly                   |
+| Client disconnect handling           | Partially      | Some logic present, but not robust                         |
+| Client message receiving thread      | Incorrect      | Thread is started recursively, causing issues              |
+
+---
+
+## Next Steps
+
+- Refactor the server to define and use a `handle_client` function for each client thread.
+- Move the message receiving and broadcasting logic into this handler.
+- Use a lock to protect the `clients` list.
+- Call `broadcast_message` when a message is received from a client.
+- Clean up unnecessary thread/lock usage in both server and client.
+- Ensure the client only starts the receive thread once.
+
+Would you like a sample refactored server and client code outline to illustrate these changes?
+
+User: How do I Refactor the server to define and use a handle_client function for each client thread?
+
+GitHub Copilot: To refactor your server so that each client is handled in its own thread using a `handle_client` function, follow these steps:
+
+---
+
+## 1. Move All Per-Client Logic Into `handle_client`
+
+- The `handle_client` function should:
+  - Receive the username.
+  - Broadcast join/leave messages.
+  - Continuously receive messages from its client and broadcast them to all others.
+  - Remove the client from the list and close the socket on disconnect.
+
+## 2. Only Start the Thread in the Main Loop
+
+- In the main server loop, accept a connection and start a new thread with `handle_client(connectionSocket, addr)`.
+
+## 3. Use a Lock for the Shared `clients` List
+
+- Use a `threading.Lock` to protect the `clients` list when adding/removing clients.
+
+---
+
+### Example Refactored Structure
+
+```python
+import threading
+from socket import socket, AF_INET, SOCK_STREAM
+
+serverPort = 12000
+serverSocket = socket(AF_INET, SOCK_STREAM)
+serverSocket.bind(('', serverPort))
+serverSocket.listen(5)
+print('The ClassChat Server is ready.')
+
+clients = []
+clients_lock = threading.Lock()
+
+def broadcast_message(message, sender_socket):
+    with clients_lock:
+        for client in clients:
+            if client != sender_socket:
+                try:
+                    client.send(message.encode())
+                except:
+                    pass  # Optionally handle broken sockets
+
+def handle_client(connectionSocket, addr):
+    try:
+        username = connectionSocket.recv(1024).decode()
+        with clients_lock:
+            clients.append(connectionSocket)
+        print(f"Received from client {addr}: {username}")
+        broadcast_message(f"{username} has joined the chat.", connectionSocket)
+        connectionSocket.send("ACK: Connection Established.".encode())
+
+        while True:
+            data = connectionSocket.recv(1024)
+            if not data:
+                break
+            message = data.decode()
+            print(f"Received from {username}@{addr}: {message}")
+            broadcast_message(f"{username}: {message}", connectionSocket)
+    except Exception as e:
+        print(f"Error with client {addr}: {e}")
+    finally:
+        with clients_lock:
+            if connectionSocket in clients:
+                clients.remove(connectionSocket)
+        broadcast_message(f"{username} has left the chat.", connectionSocket)
+        connectionSocket.close()
+        print(f"Connection with {addr} closed.")
+
+while True:
+    connectionSocket, addr = serverSocket.accept()
+    threading.Thread(target=handle_client, args=(connectionSocket, addr), daemon=True).start()
+```
+
+---
+
+**Key Points:**
+- All per-client logic is in `handle_client`.
+- The main loop only accepts connections and starts threads.
+- The `clients` list is protected by a lock.
+- Broadcasting is done to all clients except the sender.
+- Client disconnects are handled cleanly.
+
+This structure is robust and scalable for a basic multi-client chat server. Let me know if you want a more detailed explanation or help with the client code!
+
+User: Have I successfully performed this refactoring?
+
+GitHub Copilot: You are very close, but there are a few issues to address for a fully correct refactoring:
+
+### What You Did Well
+- You moved per-client logic into the `handle_client` function.
+- You use a thread for each client.
+- You use a lock (`clients_lock`) for thread-safe access to the `clients` list.
+- You handle client disconnects and broadcast join/leave messages.
+
+### Issues to Fix
+
+1. **`broadcast_message` Scope:**  
+   - You define `broadcast_message` inside `handle_client`, but you call it before its definition and also from outside.  
+   - **Fix:** Move `broadcast_message` to the top-level (outside of `handle_client`) so it is accessible everywhere.
+
+2. **Adding Clients to the List:**  
+   - You never add the new client to the `clients` list in the main loop or in `handle_client`.  
+   - **Fix:** After accepting a connection, add the socket to `clients` (with the lock) before starting the thread.
+
+3. **Missing `addr` in Thread Arguments:**  
+   - You use `addr` in `handle_client`, but only pass `connectionSocket` as an argument.  
+   - **Fix:** Pass both `connectionSocket` and `addr` to `handle_client`.
+
+4. **Broadcasting Actual Messages:**  
+   - You currently broadcast only "Client X has sent a message." instead of the actual message content.  
+   - **Fix:** Broadcast the actual message, e.g., `f"{username}: {message}"`.
+
+---
+
+### Example of Corrected Structure
+
+```python
+import threading
+from socket import socket, AF_INET, SOCK_STREAM
+
+serverPort = 12000
+serverSocket = socket(AF_INET, SOCK_STREAM)
+serverSocket.bind(('', serverPort))
+serverSocket.listen(5)
+print('The ClassChat Server is ready.')
+
+clients = []
+clients_lock = threading.Lock()
+
+def broadcast_message(message, sender_socket):
+    with clients_lock:
+        for client in clients:
+            if client != sender_socket:
+                try:
+                    client.send(message.encode())
+                except:
+                    pass
+
+def handle_client(connectionSocket, addr):
+    try:
+        username = connectionSocket.recv(1024).decode()
+        print(f"Received from client {addr}: {username}")
+        broadcast_message(f"{username} has joined the chat.", connectionSocket)
+        connectionSocket.send("ACK: Connection Established.".encode())
+
+        while True:
+            message = connectionSocket.recv(1024)
+            if not message:
+                break
+            message = message.decode()
+            print(f"Received from {username}@{addr}: {message}")
+            broadcast_message(f"{username}: {message}", connectionSocket)
+    except Exception as e:
+        print(f"An error occurred while handling client {addr}: {e}")
+    finally:
+        with clients_lock:
+            if connectionSocket in clients:
+                clients.remove(connectionSocket)
+        broadcast_message(f"{username} has left the chat.", connectionSocket)
+        connectionSocket.close()
+        print(f"Connection with client {addr} closed.")
+
+while True:
+    connectionSocket, addr = serverSocket.accept()
+    with clients_lock:
+        clients.append(connectionSocket)
+    threading.Thread(target=handle_client, args=(connectionSocket, addr), daemon=True).start()
+```
+
+---
+
+**Summary:**  
+You are almost there! Move `broadcast_message` outside, ensure clients are added to the list, pass `addr` to the handler, and broadcast the actual message content. After these fixes, your refactoring will be complete and robust.
+
+User: Have I successfully performed this refactoring now, using this correct structure example??
+
+GitHub Copilot: Yes, your server code now correctly implements the intended multi-threaded chat server structure:
+
+- All per-client logic is in the `handle_client` function.
+- Each client is handled in its own thread.
+- The `clients` list is protected by a lock for thread safety.
+- Clients are added to the list before the handler thread starts.
+- The `broadcast_message` function is at the top level and used for all broadcasts.
+- Join, message, and leave events are broadcast to all other clients.
+- Client disconnects are handled cleanly.
+
+**Summary:**  
+You have successfully refactored your server to use the correct, robust multi-threaded structure for a chat server. This is a solid foundation for further features or improvements.
+
+User: What are the correct handlers for the message receiving and broadcasting logic so that it can be properly relocated? What changes need to be made to make this fix?
+
+GitHub Copilot: Here’s how to properly structure the message receiving and broadcasting logic for your client and server:
+
+---
+
+## 1. Server: Message Receiving and Broadcasting
+
+**Handler Location:**  
+- All per-client logic (receiving messages, broadcasting, disconnect handling) should be inside the `handle_client` function.
+- The `broadcast_message` function should be at the top level (outside any other function).
+
+**Correct Handler Example:**
+
+```python
+def broadcast_message(message, sender_socket):
+    with clients_lock:
+        for client in clients:
+            if client != sender_socket:
+                try:
+                    client.send(message.encode())
+                except:
+                    pass
+
+def handle_client(connectionSocket, addr):
+    try:
+        username = connectionSocket.recv(1024).decode()
+        print(f"Received from client {addr}: {username}")
+        broadcast_message(f"{username} has joined the chat.", connectionSocket)
+        connectionSocket.send("ACK: Connection Established.".encode())
+
+        while True:
+            message = connectionSocket.recv(1024)
+            if not message:
+                break
+            message = message.decode()
+            print(f"Received from {username}@{addr}: {message}")
+            broadcast_message(f"{username}: {message}", connectionSocket)
+    except Exception as e:
+        print(f"An error occurred while handling client {addr}: {e}")
+    finally:
+        with clients_lock:
+            if connectionSocket in clients:
+                clients.remove(connectionSocket)
+        broadcast_message(f"{username} has left the chat.", connectionSocket)
+        connectionSocket.close()
+        print(f"Connection with client {addr} closed.")
+```
+
+**Key Points:**
+- Only the `handle_client` thread for each client receives and processes messages from that client.
+- All received messages are broadcast to other clients using `broadcast_message`.
+- The main server loop only accepts connections and starts threads.
+
+---
+
+## 2. Client: Message Receiving
+
+**Handler Location:**  
+- The `receive_messages` function should only be started once, in a single thread, after connecting.
+- Do not start new threads inside `receive_messages`.
+
+**Correct Handler Example:**
+
+```python
+def receive_messages(sock: socket) -> None:
+    while True:
+        message = sock.recv(1024)
+        if not message:
+            print('Connection terminated by the server. Disconnecting...')
+            sock.close()
+            sys.exit()
+        print('From ClassChat Server:', message.decode())
+
+# After connecting:
+threading.Thread(target=receive_messages, args=(clientSocket,), daemon=True).start()
+```
+
+**Key Points:**
+- Do not start new threads or locks inside `receive_messages`.
+- The main thread handles user input and sending messages; the receive thread only prints incoming messages.
+
+---
+
+## 3. Changes Needed
+
+**Server:**
+- Ensure all message receiving and broadcasting is inside `handle_client`.
+- Do not duplicate message handling in the main loop.
+- Keep `broadcast_message` at the top level.
+
+**Client:**
+- Remove the lines inside `receive_messages` that start new threads or locks.
+- Only start the receive thread once, after connecting.
+
+---
+
+**Summary Table**
+
+| Component | Handler Function         | Where to Place Logic                | What to Remove/Fix                |
+|-----------|-------------------------|-------------------------------------|-----------------------------------|
+| Server    | `handle_client`         | All per-client receive/broadcast    | No message handling in main loop  |
+| Server    | `broadcast_message`     | Top-level (not nested)              |                                   |
+| Client    | `receive_messages`      | Only start once, no recursion       | Remove thread/lock inside handler |
+
+---
+
+**Result:**  
+With these changes, your chat server will correctly receive and broadcast messages, and your client will properly display all incoming messages from the server.
+
+User: Have these changes been sucessfully implemented? If not what changes reamin?
+
+GitHub Copilot: Yes, these changes have been successfully implemented in your current code:
+
+### Server (ClassChatServer.py)
+- All per-client logic (receiving messages, broadcasting, disconnect handling) is inside `handle_client`.
+- `broadcast_message` is a top-level function and is used for all broadcasts.
+- The `clients` list is protected by a lock for thread safety.
+- Clients are added to the list before the handler thread starts.
+- The main server loop only accepts connections and starts threads.
+
+### Client (ClassChatClient.py)
+- The `receive_messages` function is started once in a single thread after connecting.
+- No unnecessary thread or lock usage inside `receive_messages`.
+- The main thread handles user input and sending messages.
+
+---
+
+**Summary:**  
+Your code now follows the correct structure for a multi-client chat system with proper message receiving and broadcasting logic. No further structural changes are needed for basic chat functionality. You can now focus on enhancements or additional features if desired!
+
+User: Answer these questions:
+
+- Is there a lock to protect the clients list as needed?
+- Does the broadcast_message call activate as intended when a message is received from a client?
+- Does the client only start the receive thread once?
+- What clean ups are needed to remove unnecessary thread/lock usage in both server and client?
+
+GitHub Copilot: Here are direct answers to your questions based on your current code:
+
+---
+
+### 1. Is there a lock to protect the clients list as needed?
+**Yes.**  
+You use `clients_lock = threading.Lock()` and wrap all access to the `clients` list (adding/removing clients, iterating in `broadcast_message`) with `with clients_lock:`. This ensures thread-safe access.
+
+---
+
+### 2. Does the broadcast_message call activate as intended when a message is received from a client?
+**Yes.**  
+In `handle_client`, after receiving and decoding a message from a client, you call:
+```python
+broadcast_message(f"{username}: {message}", connectionSocket)
+```
+This broadcasts the message to all other connected clients as intended.
+
+---
+
+### 3. Does the client only start the receive thread once?
+**Yes.**  
+In your client code, the receive thread is started once after connecting:
+```python
+threading.Thread(target=receive_messages, args=(clientSocket,), daemon=True).start()
+```
+There is no recursive or repeated thread starting.
+
+---
+
+### 4. What clean ups are needed to remove unnecessary thread/lock usage in both server and client?
+**No further clean up is needed.**  
+- **Server:** All thread and lock usage is now correct and necessary for safe, concurrent operation.
+- **Client:** There are no unnecessary threads or locks; the receive thread is started once, and no locks are used.
+
+---
+
+**Summary:**  
+Your code now uses threads and locks correctly for a multi-client chat system. No further clean up is required for thread/lock usage.
+
+User: What are causing these type errors for the variables and parameters and how can they be resolved?
+
+GitHub Copilot: The type errors and warnings you see in your screenshots are from Pylance (and Ruff), which are static analysis tools in VS Code. They are not runtime errors, but rather warnings about missing or unknown type information in your code. Here’s what’s happening and how to resolve them:
+
+---
+
+## Causes of the Type Errors
+
+1. **Missing Type Annotations**
+   - Python is dynamically typed, but Pylance expects (or prefers) type annotations for function parameters and variables, especially when using static analysis.
+   - Example:  
+     ```python
+     def broadcast_message(message, sender_socket):
+     ```
+     Pylance does not know what type `message` or `sender_socket` is.
+
+2. **Unknown Variable Types**
+   - When you use variables like `client`, `username`, or `addr` without type hints, Pylance cannot infer their types.
+   - Example:  
+     ```python
+     for client in clients:
+         client.send(message.encode())
+     ```
+     Pylance does not know what type `client` is.
+
+3. **Unknown Member Types**
+   - When you call methods like `.send()`, `.recv()`, or `.decode()` on variables without type hints, Pylance cannot be sure those methods exist for those objects.
+
+4. **Bare Except**
+   - The warning about `except:` is a style warning from Ruff, not a type error. It’s best practice to catch specific exceptions.
+
+---
+
+## How to Fix These Issues
+
+### 1. Add Type Annotations
+
+Add type hints to your function parameters and variables. For sockets, use `socket` from the `socket` module. For addresses, use `tuple` (usually `Tuple[str, int]`).
+
+**Example:**
+
+```python
+from socket import socket
+from typing import Tuple
+
+def broadcast_message(message: str, sender_socket: socket) -> None:
+    ...
+
+def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
+    ...
+```
+
+### 2. Type Hints for Variables
+
+You can also add type hints for variables if you want to be explicit:
+
+```python
+clients: list[socket] = []
+clients_lock: threading.Lock = threading.Lock()
+```
+
+### 3. Use Specific Exceptions
+
+Replace `except:` with `except Exception:` or a more specific exception if possible.
+
+```python
+try:
+    ...
+except Exception as e:
+    print(e)
+```
+
+### 4. Example with Type Annotations
+
+Here’s how your server code would look with type annotations:
+
+```python
+import threading
+from socket import socket, AF_INET, SOCK_STREAM
+from typing import Tuple, List
+
+serverPort = 12000
+serverSocket: socket = socket(AF_INET, SOCK_STREAM)
+serverSocket.bind(('', serverPort))
+serverSocket.listen(5)
+print('The ClassChat Server is ready.')
+
+clients: List[socket] = []
+clients_lock: threading.Lock = threading.Lock()
+
+def broadcast_message(message: str, sender_socket: socket) -> None:
+    with clients_lock:
+        for client in clients:
+            if client != sender_socket:
+                try:
+                    client.send(message.encode())
+                except Exception:
+                    pass
+
+def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
+    try:
+        username = connectionSocket.recv(1024).decode()
+        print(f"Received from client {addr}: {username}")
+        broadcast_message(f"{username} has joined the chat.", connectionSocket)
+        connectionSocket.send("ACK: Connection Established.".encode())
+
+        while True:
+            message = connectionSocket.recv(1024)
+            if not message:
+                break
+            message = message.decode()
+            print(f"Received from {username}@{addr}: {message}")
+            broadcast_message(f"{username}: {message}", connectionSocket)
+    except Exception as e:
+        print(f"An error occurred while handling client {addr}: {e}")
+    finally:
+        with clients_lock:
+            if connectionSocket in clients:
+                clients.remove(connectionSocket)
+        broadcast_message(f"{username} has left the chat.", connectionSocket)
+        connectionSocket.close()
+        print(f"Connection with client {addr} closed.")
+
+while True:
+    connectionSocket, addr = serverSocket.accept()
+    with clients_lock:
+        clients.append(connectionSocket)
+    threading.Thread(target=handle_client, args=(connectionSocket, addr), daemon=True).start()
+```
+
+---
+
+## Summary Table
+
+| Issue Type                | Cause                                 | Solution                                 |
+|---------------------------|---------------------------------------|------------------------------------------|
+| Unknown parameter type    | No type annotation on function params | Add type hints to all function params    |
+| Unknown variable type     | No type hint for variable             | Add type hints to variables              |
+| Unknown member type       | No type hint for object               | Add type hints so Pylance can infer type |
+| Bare except               | Using `except:`                       | Use `except Exception:` or specific type |
+
+---
+
+**Bottom line:**  
+Add type annotations to your function parameters and variables, and use specific exceptions. This will resolve the Pylance type errors and improve code clarity!
+
+User: Adding the type annotations as described seems to have fixed all but one issue. Why is it flagging the username variable?
+
+GitHub Copilot: The error `"username" is possibly unbound` occurs because Pylance detects that, if an exception is raised before the line `username = connectionSocket.recv(1024).decode()` completes, the `username` variable will not be set. However, you use `username` in the `finally` block (for example, in `broadcast_message(f"{username}@{addr} has left the chat.", ...)`), which could cause a runtime error if `username` was never assigned.
+
+### Why This Happens
+- If an exception occurs before `username` is assigned (e.g., the client disconnects immediately or a network error occurs), the `finally` block will still try to use `username`, which would not exist.
+
+### How to Fix
+
+**Initialize `username` to a default value (e.g., `None` or `"<unknown>"`) before the `try` block.**  
+Then, in the `finally` block, use this value safely.
+
+#### Example Fix
+
+```python
+def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
+    username = "<unknown>"  # Initialize before try
+    try:
+        username = connectionSocket.recv(1024).decode()
+        print(f"Received from client {addr}: {username}")
+        broadcast_message(f"{username} has joined the chat.", connectionSocket)
+        connectionSocket.send("ACK: Connection Established.".encode())
+
+        while True:
+            message = connectionSocket.recv(1024)
+            if not message:
+                break
+            message = message.decode()
+            print(f"Received from {username}@{addr}: {message}")
+            broadcast_message(f"{username}: {message}", connectionSocket)
+    except Exception as e:
+        print(f"An error occurred while handling client {addr}: {e}")
+    finally:
+        with clients_lock:
+            if connectionSocket in clients:
+                clients.remove(connectionSocket)
+        broadcast_message(f"{username}@{addr} has left the chat.", connectionSocket)
+        connectionSocket.close()
+        print(f"Connection with client {addr} closed.")
+```
+
+**Summary:**  
+Initialize `username` before the `try` block to ensure it always exists, even if an exception occurs. This will resolve the "possibly unbound" warning.
+
+User: Analyze the codebase and verify if the Multi-Thread Communication Implementation is correct and functional
+
+GitHub Copilot: Based on your latest code for both the server and client, here is a detailed analysis of your Multi-Thread Communication implementation:
+
+---
+
+## 1. **Server (ClassChatServer.py)**
+
+### **Correctness & Functionality**
+
+- **Thread-per-client:**  
+  Each client connection is handled in its own thread via `handle_client`, allowing multiple clients to interact with the server simultaneously.
+
+- **Thread-safe client list:**  
+  The `clients` list is protected by a `threading.Lock` (`clients_lock`) for all add/remove and broadcast operations, preventing race conditions.
+
+- **Broadcasting:**  
+  The `broadcast_message` function sends messages to all clients except the sender, ensuring that all connected clients receive chat messages and join/leave notifications.
+
+- **Client disconnects:**  
+  When a client disconnects, it is removed from the `clients` list, and a leave message is broadcast to the remaining clients.
+
+- **Type annotations:**  
+  Type hints are present, improving code clarity and static analysis.
+
+- **No unnecessary thread/lock usage:**  
+  All threading and locking is necessary and correctly scoped.
+
+### **Potential Improvements**
+
+- **Exception handling:**  
+  You use a generic `except Exception:` which is fine for robustness, but you may want to log or handle specific exceptions for debugging.
+- **Username initialization:**  
+  You have fixed the "possibly unbound" warning by initializing `username` before the `try` block.
+- **Graceful shutdown:**  
+  There is no explicit server shutdown logic, but this is not required for basic functionality.
+
+---
+
+## 2. **Client (ClassChatClient.py)**
+
+### **Correctness & Functionality**
+
+- **Separate receive thread:**  
+  The client starts a single thread to receive messages from the server, allowing the main thread to handle user input and sending messages.
+
+- **Clean disconnect:**  
+  If the server disconnects, the client prints a message and exits cleanly.
+
+- **No unnecessary thread/lock usage:**  
+  The receive thread is started only once, and there are no unnecessary locks.
+
+- **User experience:**  
+  The client can send and receive messages concurrently, and can exit cleanly with "exit".
+
+---
+
+## 3. **Multi-Client Communication**
+
+- **Multiple clients can connect, send, and receive messages simultaneously.**
+- **Messages from one client are broadcast to all other clients.**
+- **Join/leave notifications are sent to all clients.**
+- **No blocking or deadlocks are present.**
+
+---
+
+## 4. **Summary Table**
+
+| Feature                        | Status      | Notes                                      |
+|--------------------------------|-------------|--------------------------------------------|
+| Thread-per-client (server)     | ✅ Correct  | Each client handled in its own thread      |
+| Thread-safe client list        | ✅ Correct  | Lock used for all access                   |
+| Broadcasting                   | ✅ Correct  | All clients receive messages               |
+| Client disconnect handling     | ✅ Correct  | Clean removal and notification             |
+| Client receive thread          | ✅ Correct  | Only one thread, no recursion              |
+| No unnecessary thread/lock     | ✅ Correct  | All usage is necessary and correct         |
+| Type annotations               | ✅ Present  | Improves static analysis                   |
+
+---
+
+## **Conclusion**
+
+**Your Multi-Thread Communication implementation is correct and functional.**  
+You have achieved a robust, thread-safe, multi-client chat system where all clients can communicate in real time. The code structure is clean and follows best practices for this type of application.
+
+If you want to add enhancements (usernames, private messages, server shutdown, etc.), you now have a solid foundation to build on!
+
+User: I tested the server by connecting through three clients and they appear to be able to sucessfully communicate. Is there a way to clean up the way the chat appears on the terminal compared to how it is now?
+
+GitHub Copilot: Yes, you can significantly improve the readability and user experience of your chat in the terminal! Here are some practical suggestions and code tweaks:
+
+---
+
+## 1. **Add Newlines and Clear Prompts**
+
+- **Add a newline before each incoming message** so it doesn’t run into the input prompt.
+- **Show the prompt again after a message is received** (optional, but helps with usability).
+
+**Client receive function improvement:**
+```python
+def receive_messages(sock: socket) -> None:
+    while True:
+        message = sock.recv(1024)
+        if not message:
+            print('\n[System] Connection terminated by the server. Disconnecting...')
+            sock.close()
+            sys.exit()
+        print(f'\n{message.decode()}\n> ', end='', flush=True)  # Add newline and prompt
+```
+- The `\n> ` ensures the user sees a new prompt after each message.
+
+---
+
+## 2. **Format Messages Consistently**
+
+- **Prefix system messages** (join/leave) with `[System]` or similar.
+- **Show usernames clearly** for chat messages.
+
+**Example server-side formatting:**
+```python
+# When broadcasting a chat message:
+broadcast_message(f"{username}: {message}", connectionSocket)
+
+# When broadcasting a join/leave:
+broadcast_message(f"[System] {username} has joined the chat.", connectionSocket)
+broadcast_message(f"[System] {username} has left the chat.", connectionSocket)
+```
+
+---
+
+## 3. **Suppress Echoed Input**
+
+- If you want to avoid the user’s own message appearing twice (once as input, once as broadcast), you can skip printing messages from yourself in the client.  
+  (This is optional and requires sending the username to the client, which is a more advanced feature.)
+
+---
+
+## 4. **Example: Cleaner Client Output**
+
+**Client main loop:**
+```python
+while True:
+    message = input('> ')
+    if message.strip() == "":
+        continue
+    if message.strip().lower() == "exit":
+        print("[System] Disconnecting from server...")
+        clientSocket.close()
+        sys.exit()
+    clientSocket.send(message.encode())
+```
+
+---
+
+## 5. **Optional: Colorize Output**
+
+- For even better readability, you can use the `colorama` package to color usernames, system messages, etc.
+
+---
+
+## **Summary Table**
+
+| Improvement                | How to Implement                                      |
+|----------------------------|------------------------------------------------------|
+| Newlines before messages   | Add `\n` in print statements in client receive func  |
+| Consistent message format  | Prefix system/user messages on server                |
+| Prompt after message       | Print `> ` after each incoming message               |
+| Color (optional)           | Use `colorama` or similar package                    |
+
+---
+
+**Result:**  
+With these changes, your chat will look much cleaner and be easier to follow for all users! If you want a full code snippet for any of these improvements, just ask.
+
+---
+

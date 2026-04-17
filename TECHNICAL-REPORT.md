@@ -93,3 +93,19 @@ Firstly, I created a shared `clients = []` list to track active clients and thei
 
 After my first manual implementation attempt, I asked Copilot to review my code and identify any issues. It identified several problems with my implementation, including: what tasks were incomplete, what tasks were incorrect, and what tasks were missing. I then proceeded to use this analysis to adjust my implementation and fix these problems. After a second review by Copilot, I went through each issue it identified and asked it for specific guidance on how to fix each one. I then used this guidance/examples to make the necessary manual adjustments to my implementation.
 
+Once all necessary additions/edits were made and all errors were resolved, I tested the server and created three client terminals, switching between the three to test if multiple clients could connect and communicate with one another and the server. Below are screenshots of the successful testing of this feature:
+
+![alt text](image.png)
+![alt text](image-1.png)
+![alt text](image-2.png)
+
+A small formatting edit was implemented to the broadcast messaging in order to clear up any confusion, as the results of this test were a little jumbled and hard to follow. With tips from GitHub Copilot's analysis, I did some syntax and formatting tweaks. Below is the newest test results:
+
+![alt text](image-3.png)
+![alt text](image-4.png)
+![alt text](image-5.png)
+
+I then updated the `TRANSCRIPT.md` file to document the exact usage of Github Copilot to help identify these issues and find their resolutions for full transparency.
+
+
+---

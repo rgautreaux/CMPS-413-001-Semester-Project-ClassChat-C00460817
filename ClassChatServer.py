@@ -1,25 +1,27 @@
 import threading
 from socket import socket, AF_INET, SOCK_STREAM
+from typing import Tuple, List
 
 serverPort = 12000
-serverSocket = socket(AF_INET, SOCK_STREAM)
+serverSocket: socket = socket(AF_INET, SOCK_STREAM)
 serverSocket.bind(('', serverPort))
 serverSocket.listen(5)
 print('The ClassChat Server is ready.')
 
-clients = []
-clients_lock = threading.Lock()
+clients: List[socket] = []
+clients_lock: threading.Lock = threading.Lock()
 
-def broadcast_message(message, sender_socket):
+def broadcast_message(message: str, sender_socket: socket) -> None:
     with clients_lock:
         for client in clients:
             if client != sender_socket:
                 try:
                     client.send(message.encode())
-                except:
+                except Exception:
                     pass
 
-def handle_client(connectionSocket, addr):
+def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
+    username = "<unknown>"  # Initialize before try
     try:
         username = connectionSocket.recv(1024).decode()
         print(f"Received from client {addr}: {username}")
@@ -39,7 +41,7 @@ def handle_client(connectionSocket, addr):
         with clients_lock:
             if connectionSocket in clients:
                 clients.remove(connectionSocket)
-        broadcast_message(f"{username} has left the chat.", connectionSocket)
+        broadcast_message(f"{username}@{addr} has left the chat.", connectionSocket)
         connectionSocket.close()
         print(f"Connection with client {addr} closed.")
 

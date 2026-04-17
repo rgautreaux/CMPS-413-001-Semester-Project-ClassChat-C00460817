@@ -7,10 +7,10 @@ def receive_messages(sock: socket) -> None:
     while True:
         message = sock.recv(1024) #Receive server response
         if not message:
-            print('Connection terminated by the server. Disconnecting...')
+            print('\n[System] Connection terminated by the server. Disconnecting...')
             sock.close()
             sys.exit()
-        print('From ClassChat Server:', message.decode()) #Print server response
+        print(f'\n{message.decode()}\n> ', end='', flush=True)  # Add newline and prompt
 
 serverName = 'localhost' #Server Name
 serverPort = 12000 #Port Number
@@ -25,11 +25,11 @@ clientSocket.send(username.encode()) #Send username to server
 #Message Receiving Thread
 threading.Thread(target=receive_messages, args=(clientSocket,), daemon=True).start() #Start thread to receive server messages
 while True:
-    message = input('Enter message to send to ClassChat Server (type "exit" to leave):')
+    message = input('> ')
     if message.strip() == "":
-        continue  # Ignore empty messages
-    if message.strip().lower() in ("exit"):
-        print("Disconnecting from server...")
+        continue
+    if message.strip().lower() == "exit":
+        print("[System] Disconnecting from server...")
         clientSocket.close()
         sys.exit()
     clientSocket.send(message.encode()) #Send message to server
