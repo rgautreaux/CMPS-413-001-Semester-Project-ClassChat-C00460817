@@ -12,7 +12,7 @@ def receive_messages(sock: socket) -> None:
             print('\n[System] Connection terminated by the server. Disconnecting...')
             sock.close()
             sys.exit()
-        print(f'\n{message_parse["content"]}\n> ', end='', flush=True)  # Add newline and prompt
+        print(f'\n{username}: {json.dumps({"status": "sender", "receiver": message_parse["receiver"], "text": message_parse["text"]})}\n> ', end='', flush=True)  # Add newline and prompt
 
 serverName = 'localhost' #Server Name
 serverPort = 12000 #Port Number
@@ -27,6 +27,9 @@ clientSocket.send(username.encode()) #Send username to server
 #Message Receiving Thread
 threading.Thread(target=receive_messages, args=(clientSocket,), daemon=True).start() #Start thread to receive server messages
 while True:
+    recipient = input('> ')
+    if recipient.strip() == "":
+        continue
     message = input('> ')
     if message.strip() == "":
         continue
@@ -34,4 +37,4 @@ while True:
         print("[System] Disconnecting from server...")
         clientSocket.close()
         sys.exit()
-    clientSocket.send(json.dumps({"status": "sender", "receiver": message}).encode()) #Send JSON message to server
+    clientSocket.send(json.dumps({"status": "sender": username, "receiver": recipient, "text": message}).encode()) #Send JSON message to server

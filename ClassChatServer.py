@@ -40,9 +40,13 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int], username: str
             message_parse = json.loads(message.decode()) # Attempt to parse the message as JSON 
 
             if "receiver" in message_parse and message_parse["receiver"] in client_dictionary.values(): # Check if the message is intended for a specific recipient
-                print(f"Received from {username}@{addr}: {message_parse['sender']}: {message_parse['text']}") # Log the message received from the client
+                if message_parse["receiver"] == username: # If the message is intended for this client, send it directly to them
+                    client_dictionary[connectionSocket].send(json.dumps({"status": "sender", "receiver": message_parse["receiver"], "text": message_parse["text"]}).encode()) # Send the message to the intended recipient
+                    print(f"Received from {username}@{addr}: {message_parse['sender']}: {message_parse['text']}") # Log the message received from the client
+                else:
+                    pass # If the intended recipient is not this client, do not send the message to this client
             else: #If not intended for a specific person, broadcast message to all active users
-                broadcast_message(f"{username}: {message_parse['sender']}: {message_parse['text']}", connectionSocket) # Broadcast the message to all other clients
+                broadcast_message(f"{username}: {json.dumps({"status": "sender", "receiver": message_parse["receiver"], "text": message_parse["text"]})}", connectionSocket) # Broadcast the message to all other clients
     except Exception as e:
         print(f"An error occurred while handling client {addr}: {e}") # Log any exceptions that occur while handling the client
 
