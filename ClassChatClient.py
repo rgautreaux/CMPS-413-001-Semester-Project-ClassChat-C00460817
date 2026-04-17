@@ -1,5 +1,3 @@
-from email import message
-from email.mime import text
 from socket import socket, AF_INET, SOCK_STREAM
 import threading
 import sys
