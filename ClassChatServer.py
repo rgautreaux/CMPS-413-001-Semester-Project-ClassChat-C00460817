@@ -14,13 +14,13 @@ client_dictionary: dict[str, socket] = {}
 clients_lock: threading.Lock = threading.Lock()
 
 def broadcast_message(message: str, sender_socket: socket) -> None:
-    with clients_lock:
+    with clients_lock: # Ensure thread-safe access to the clients list when broadcasting messages
         for client in clients:
-            if client != sender_socket:
+            if client != sender_socket: # Don't send the message back to the sender
                 try:
-                    client.send(message.encode() if isinstance(message, str) else message)
+                    client.send(message.encode() if isinstance(message, str) else message) # Send the message to the client, encoding it if it's a string
                 except Exception:
-                    pass
+                    pass # If there's an error sending the message (e.g., client disconnected), ignore it and continue broadcasting to other clients
 
 def handle_client(connectionSocket: socket, addr: Tuple[str, int], username: str) -> None:
     try:
