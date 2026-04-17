@@ -16,25 +16,22 @@ def receive_messages(sock: socket) -> None:
         try:
             incoming_message = json.loads(message.decode()) #Attempt to parse the incoming message as JSON
             status = incoming_message.get("status")
-            # Print each message on its own line, with clear prefixes
             if status == "ACK":
                 print(f'\n[System] {incoming_message.get("message")}')
             elif status == "error":
                 print(f'\n[Error] {incoming_message.get("text")}')
             elif status == "info":
-                # Only print non-empty info messages
                 info_text = incoming_message.get("text", "").strip()
                 if info_text:
                     print(f'\n[Info] {info_text}')
+            elif incoming_message.get("type") == "group_message":
+                group = incoming_message.get("group")
+                sender = incoming_message.get("sender")
+                text = incoming_message.get("text")
+                print(f"\n[{group}] {sender}: {text}")
             else:
-                # Regular chat message
-                sender = incoming_message.get("sender", "Unknown") # Default to "Unknown" if sender is not provided
-                text = incoming_message.get("text", "") # Default to empty string if text is not provided
-                if incoming_message.get("type") == "group_message":
-                    group = incoming_message.get("group")
-                    sender = incoming_message.get("sender")
-                    text = incoming_message.get("text")
-                    print(f"\n[{group}] {sender}: {text}")
+                sender = incoming_message.get("sender", "Unknown")
+                text = incoming_message.get("text", "")
                 print(f'\n{sender}: {text}')
             print("> ", end='', flush=True) # Always print prompt after message
         except Exception:
