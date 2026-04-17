@@ -45,21 +45,6 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
             if not message: 
                 break # If the client has disconnected, exit the loop
             message_parse = json.loads(message.decode()) # Attempt to parse the message as JSON 
-            receiver = message_parse.get("receiver", "").strip()
-            if receiver and receiver.lower() != "all":
-                #Direct Message for intended recipient
-                if receiver in client_dictionary:
-                    try:
-                        # Always send JSON-encoded bytes
-                        client_dictionary[receiver].send(json.dumps(message_parse).encode())
-                        print(f"Received from {username}@{addr}: {message_parse['sender']}: {message_parse['text']}")
-                    except Exception:
-                        pass
-                else:
-                    error_msg = {"status": "error", "text": f"User '{receiver}' is not online."} # If the intended recipient is not online, let the user know
-                    connectionSocket.send(json.dumps(error_msg).encode())
-            else: #If not intended for a specific person, broadcast message to all active users
-                broadcast_message(message.decode(), connectionSocket)
             if message_parse.get("type") == "group_command": #checks if the message was a group command
                 command = message_parse.get("command")
                 groupname = message_parse.get("group")
@@ -94,26 +79,58 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                 text = message_parse.get("text")
                 handle_group_message(sender, groupname, text)
                 continue  # Skip further processing for this message
+            elif message_parse.get("type") == "private_message":
+                receiver = message_parse.get("receiver", "").strip()
+                if receiver and receiver.lower() != "all":
+                    #Direct Message for intended recipient
+                    if receiver in client_dictionary:
+                        try:
+                            # Always send JSON-encoded bytes
+                            client_dictionary[receiver].send(json.dumps(message_parse).encode())
+                            print(f"Received from {username}@{addr}: {message_parse['sender']}: {message_parse['text']}")
+                        except Exception:
+                            pass
+                    else:
+                        error_msg = {"status": "error", "text": f"User '{receiver}' is not online."} # If the intended recipient is not online, let the user know
+                        connectionSocket.send(json.dumps(error_msg).encode())
+            else: #If not intended for a specific person, broadcast message to all active users
+                broadcast_message(message.decode(), connectionSocket)
     except Exception as e:
         print(f"An error occurred while handling client {addr}: {e}") # Log any exceptions that occur while handling the client
 
     finally:
-        with clients_lock: # Ensure thread-safe access to the clients list when removing the client
-            if connectionSocket in clients: 
-                clients.remove(connectionSocket) # Remove the client from the list of connected clients
+        with clients_lock:
+            if connectionSocket in clients:
+                clients.remove(connectionSocket)
             if username in client_dictionary:
                 del client_dictionary[username]
-        broadcast_message(json.dumps({"status": "info", "text": f"{username}@{addr} has left the chat."}), connectionSocket) # Notify other clients that this user has left the chat
-        print(f"Connection with client {addr} closed.") # Log that the connection with the client has been closed
+        # Remove user from all groups
+        for group in groups.values():
+            group.discard(username)
+        broadcast_message(json.dumps({"status": "info", "text": f"{username}@{addr} has left the chat."}), connectionSocket)
+        print(f"Connection with client {addr} closed.")
         connectionSocket.close()
 
 def handle_group_message(sender, groupname, message):
     if groupname in groups and sender in groups[groupname]:
         for member in groups[groupname]:
             if member != sender:
-                send_message_to_user(member, f"[{groupname}] {sender}: {message}")
+                # Send as a group_message type for proper client display
+                send_group_message_to_user(member, groupname, sender, message)
     else:
         send_message_to_user(sender, "You are not a member of this group.")
+
+def send_group_message_to_user(username, groupname, sender, message):
+    if username in client_dictionary:
+        try:
+            client_dictionary[username].send(json.dumps({
+                "type": "group_message",
+                "group": groupname,
+                "sender": sender,
+                "text": message
+            }).encode())
+        except Exception:
+            pass
 
 def send_message_to_user(username, message):
     if username in client_dictionary:

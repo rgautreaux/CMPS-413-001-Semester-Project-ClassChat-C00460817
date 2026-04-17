@@ -30,6 +30,11 @@ def receive_messages(sock: socket) -> None:
                 # Regular chat message
                 sender = incoming_message.get("sender", "Unknown") # Default to "Unknown" if sender is not provided
                 text = incoming_message.get("text", "") # Default to empty string if text is not provided
+                if incoming_message.get("type") == "group_message":
+                    group = incoming_message.get("group")
+                    sender = incoming_message.get("sender")
+                    text = incoming_message.get("text")
+                    print(f"\n[{group}] {sender}: {text}")
                 print(f'\n{sender}: {text}')
             print("> ", end='', flush=True) # Always print prompt after message
         except Exception:
@@ -56,38 +61,30 @@ while True:
     type = input('Message Type (Group, Private, File Transfer, Offline, Encrypted): ').strip() #User/Client Input for recipient of message
     if not type:
         type = "broadcast"
-    if type.lower() == "group":
-        group_input = input('Group Command (Command or Message): ').strip() #User/Client Input for group message type
-        if group_input.lower() == "command":
-            command = input('Group Command (Create, Join, Leave, List): ').strip() #User/Client Input for group command if message type is group command
-            if command.strip().lower() == "create":
-                groupname = input('Group Name to Create: ').strip() #User/Client Input for group name if creating a group
-                if not groupname:
-                    continue
-            if command.strip().lower() == "join":
-                groupname = input('Group Name to Join: ').strip() #User/Client Input for group name if joining a group
-                if not groupname:
-                    continue
-            if command.strip().lower() == "leave":
-                continue #No additional input needed for leave command, as the server can determine the group to leave based on the user's current group memberships
-            if command.strip().lower() == "list":
-                continue #No additional input needed for list command, as the server will simply return a list of available groups
-            if not command:
-                continue
-            if command.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-            print("[System] Disconnecting from server...")
-            clientSocket.close()
-            sys.exit()
-        if group_input.lower() == "message":
-            #Print received message if it is a group message
-            group = incoming_message.get("group")
-            sender = incoming_message.get("sender")
-            text = incoming_message.get("text")
-            print(f"\n[{group}] {sender}: {text}")
-            if group_message.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-            print("[System] Disconnecting from server...")
-            clientSocket.close()
-            sys.exit()
+    if type.lower() == "group": #User/Client Input for group command or message
+        group_input = input('Group Command (Command or Message): ').strip()
+        if group_input.lower() == "command": #If the user wants to send a group command
+            command = input('Group Command (Create, Join, Leave, List): ').strip() #User/Client Input for group command type
+            groupname = input('Group Name: ').strip() if command.lower() in ["create", "join", "leave"] else ""
+            group_cmd = {
+                "type": "group_command",
+                "command": command.lower(),
+                "group": groupname,
+                "sender": username
+            }
+            clientSocket.send(json.dumps(group_cmd).encode())
+            continue 
+        elif group_input.lower() == "message": #If the user wants to send a group message
+            groupname = input('Group Name: ').strip()
+            group_message = input('Group Message: ').strip() #User/Client Input for group message text
+            group_msg = {
+                "type": "group_message",
+                "group": groupname,
+                "sender": username,
+                "text": group_message
+            }
+            clientSocket.send(json.dumps(group_msg).encode())
+            continue
     elif type.lower() == "file transfer":
         filename = input('Filename: ').strip() #User/Client Input for filename if message type is file transfer
         if not filename:
@@ -99,6 +96,14 @@ while True:
             print("[System] Disconnecting from server...")
             clientSocket.close()
             sys.exit()
+        file_msg = {
+            "type": "file_transfer",
+            "sender": username,
+            "filename": filename,
+            "filedata": filedata
+        }
+        clientSocket.send(json.dumps(file_msg).encode())
+        continue
     elif type.lower() == "offline message":
         offline_message = input('Offline Message: ').strip() #User/Client Input for offline message if message type is offline message
         if not offline_message:
@@ -107,6 +112,13 @@ while True:
             print("[System] Disconnecting from server...")
             clientSocket.close()
             sys.exit()
+        offline_msg = {
+            "type": "offline_message",
+            "sender": username,
+            "text": offline_message
+        }
+        clientSocket.send(json.dumps(offline_msg).encode())
+        continue
     elif type.lower() == "encrypted":
         encrypted_message = input('Encrypted Message: ').strip() #User/Client Input for encrypted message if message type is encrypted
         if not encrypted_message:
@@ -115,8 +127,34 @@ while True:
             print("[System] Disconnecting from server...")
             clientSocket.close()
             sys.exit()
+        encrypted_msg = {
+            "type": "encrypted",
+            "sender": username,
+            "text": encrypted_message
+        }
+        clientSocket.send(json.dumps(encrypted_msg).encode())
+        continue
     elif type.lower() == "private":
         receiver = input('To (username): ').strip() #User/Client Input for recipient of message
+        if not receiver:
+            continue
+        messageText = input('Message: ').strip() #User/Client Input for message to send
+        if not messageText:
+            continue
+        if messageText.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
+            print("[System] Disconnecting from server...")
+            clientSocket.close()
+            sys.exit()
+        private_msg = {
+            "type": "private_message",
+            "sender": username,
+            "receiver": receiver,
+            "text": messageText
+        }
+        clientSocket.send(json.dumps(private_msg).encode())
+        continue
+    elif type.lower() == "broadcast":
+        receiver = input('To (username or "all"): ').strip() #User/Client Input for recipient of message
         if not receiver:
             receiver = "all"
         messageText = input('Message: ').strip() #User/Client Input for message to send
@@ -126,6 +164,14 @@ while True:
             print("[System] Disconnecting from server...")
             clientSocket.close()
             sys.exit()
+        msg = {
+            "type": "broadcast",
+            "sender": username,
+            "receiver": receiver,
+            "text": messageText
+        }
+        clientSocket.send(json.dumps(msg).encode())
+        continue
     else:
         receiver = input('To (username or "all"): ').strip() #User/Client Input for recipient of message
         if not receiver:
@@ -137,81 +183,11 @@ while True:
             print("[System] Disconnecting from server...")
             clientSocket.close()
             sys.exit()
-    #JSON Broadcast Message Format Parsing and Sending to Server
-    msg = {
-        "status": "1",
-        " type " : "broadcast",
-        "sender": username,
-        "text": messageText
-    }
-    clientSocket.send(json.dumps(msg).encode())
-
-    #JSON Private Message Format Parsing and Sending to Server
-    private_msg = {
-        "status": "1",
-        " type " : "private_message" ,
-        "sender": username,
-        "receiver": receiver,
-        "text": messageText
-    }
-    clientSocket.send(json.dumps(private_msg).encode())
-
-    #JSON Group Message Format Parsing and Sending to Server
-    group_msg = {
-        "status": "1",
-        " type " :  type,
-        "group": groupname,
-        "sender": username,
-        "text": group_message
-    }
-    clientSocket.send(json.dumps(group_msg).encode())
-
-
-     #JSON Group Command Format Parsing and Sending to Server
-    group_cmd = {
-        "status": "1",
-        " type " :  type,
-        " command ": command,
-        "receiver": "groupname",
-        "sender": username,
-    }
-    clientSocket.send(json.dumps(group_cmd).encode())
-
-    #JSON File Transfer Message Format Parsing and Sending to Server
-    file_msg = {
-        "status": "1",
-        " type " :  type,
-        "sender": username,
-        "receiver": " receiver " | "groupname",
-        " group ": "groupname", 
-        " filename ": "example.txt",
-        " filedata ": "<base64-encoded>",
-        "text": messageText
-    }
-    clientSocket.send(json.dumps(file_msg).encode())
-
-    #JSON Offline Message Format Parsing and Sending to Server
-    offline_msg = {
-        "status": "1",
-        " type " :  type,
-        "sender": username,
-        "receiver": " receiver " | "groupname",
-        " group ": "groupname", 
-        " filename ": "example.txt",
-        " filedata ": "<base64-encoded>",
-        "text": messageText
-    }
-    clientSocket.send(json.dumps(offline_msg).encode())
-
-    #JSON Encrypted Message Format Parsing and Sending to Server
-    encrypted_msg = {
-        "status": "1",
-        " type " :  type,
-        "sender": username,
-        "receiver": " receiver " | "groupname",
-        " group ": "groupname", 
-        " filename ": "example.txt",
-        " filedata ": "<base64-encoded>",
-        "text": messageText
-    }
-    clientSocket.send(json.dumps(encrypted_msg).encode())
+        msg = {
+            "type": "broadcast",
+            "sender": username,
+            "receiver": receiver,
+            "text": messageText
+        }
+        clientSocket.send(json.dumps(msg).encode())
+        continue
