@@ -1,6 +1,10 @@
 { 
-" status " :  ""  , 
-" sender " :  "  " , 
-" receiver " :  "  " , 
-" text " :  "  " 
+" status " :  "Error"  "Info" | "Message" , 
+" type " :  "group_message" | "private_message" | "file_transfer" | "offline_message" | "encrypted" | "broadcast",
+" sender " :  " sender " , 
+" receiver " :  " receiver " | "groupname" ,
+" group ": "groupname", 
+" filename ": "example.txt",
+" filedata ": "<base64-encoded>",
+" text " :  " message " 
 }

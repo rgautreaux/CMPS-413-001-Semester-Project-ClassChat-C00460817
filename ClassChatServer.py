@@ -9,9 +9,10 @@ serverSocket.bind(('', serverPort))
 serverSocket.listen(5)
 print('The ClassChat Server is ready.')
 
-clients: List[socket] = []
-client_dictionary: dict[str, socket] = {}
-clients_lock: threading.Lock = threading.Lock()
+clients: List[socket] = [] # List to keep track of connected client sockets
+client_dictionary: dict[str, socket] = {} # Dictionary to map usernames to their sockets
+clients_lock: threading.Lock = threading.Lock() # Lock to ensure thread-safe access 
+groups = {} # Dictionary to map group names to lists of member usernames
 
 def broadcast_message(message: str, sender_socket: socket) -> None:
     with clients_lock: # Ensure thread-safe access to the clients list when broadcasting messages
@@ -72,6 +73,13 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
         print(f"Connection with client {addr} closed.") # Log that the connection with the client has been closed
         connectionSocket.close()
 
+def handle_group_message(sender, groupname, message):
+    if groupname in groups and sender in groups[groupname]:
+        for member in groups[groupname]:
+            if member != sender:
+                send_message_to_user(member, f"[{groupname}] {sender}: {message}")
+    else:
+        send_message_to_user(sender, "You are not a member of this group.")
 
 while True:
     connectionSocket, addr = serverSocket.accept() # Wait for a new client to connect
