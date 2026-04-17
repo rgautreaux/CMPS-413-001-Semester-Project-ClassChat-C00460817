@@ -79,9 +79,11 @@ while True:
             clientSocket.close()
             sys.exit()
         if group_input.lower() == "message":
-            group_message = input('Group Message: ').strip() #User/Client Input for group command if message type is group command
-            if not group_message:
-                continue
+            #Print received message if it is a group message
+            group = incoming_message.get("group")
+            sender = incoming_message.get("sender")
+            text = incoming_message.get("text")
+            print(f"\n[{group}] {sender}: {text}")
             if group_message.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
             clientSocket.close()
@@ -158,25 +160,22 @@ while True:
     group_msg = {
         "status": "1",
         " type " :  type,
+        "group": groupname,
         "sender": username,
-        "receiver": "groupname",
-        " group ": "groupname", 
-        "text": messageText
+        "text": group_message
     }
     clientSocket.send(json.dumps(group_msg).encode())
 
 
      #JSON Group Command Format Parsing and Sending to Server
-    group_msg = {
+    group_cmd = {
         "status": "1",
         " type " :  type,
-        "sender": username,
+        " command ": command,
         "receiver": "groupname",
-        " group ": "groupname", 
-        " command ": "create" | "join" | "leave" | "list",
-        "text": messageText
+        "sender": username,
     }
-    clientSocket.send(json.dumps(group_msg).encode())
+    clientSocket.send(json.dumps(group_cmd).encode())
 
     #JSON File Transfer Message Format Parsing and Sending to Server
     file_msg = {

@@ -88,6 +88,12 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                     else:
                         connectionSocket.send(json.dumps({"status": "error", "text": f"You are not in group '{groupname}'."}).encode())
                 continue  # Skip further processing for this message
+            elif message_parse.get("type") == "group_message":
+                groupname = message_parse.get("group")
+                sender = message_parse.get("sender")
+                text = message_parse.get("text")
+                handle_group_message(sender, groupname, text)
+                continue  # Skip further processing for this message
     except Exception as e:
         print(f"An error occurred while handling client {addr}: {e}") # Log any exceptions that occur while handling the client
 
@@ -108,6 +114,13 @@ def handle_group_message(sender, groupname, message):
                 send_message_to_user(member, f"[{groupname}] {sender}: {message}")
     else:
         send_message_to_user(sender, "You are not a member of this group.")
+
+def send_message_to_user(username, message):
+    if username in client_dictionary:
+        try:
+            client_dictionary[username].send(json.dumps({"status": "info", "text": message}).encode())
+        except Exception:
+            pass
 
 while True:
     connectionSocket, addr = serverSocket.accept() # Wait for a new client to connect
