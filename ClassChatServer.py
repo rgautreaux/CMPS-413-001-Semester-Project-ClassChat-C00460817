@@ -60,6 +60,34 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                     connectionSocket.send(json.dumps(error_msg).encode())
             else: #If not intended for a specific person, broadcast message to all active users
                 broadcast_message(message.decode(), connectionSocket)
+            if message_parse.get("type") == "group_command": #checks if the message was a group command
+                command = message_parse.get("command")
+                groupname = message_parse.get("group")
+                sender = message_parse.get("sender")
+                if command == "create": # Create and Group Command
+                    if groupname not in groups:
+                        groups[groupname] = set()
+                    groups[groupname].add(sender)
+                    connectionSocket.send(json.dumps({"status": "info", "text": f"Group '{groupname}' created and joined."}).encode())
+                elif command == "join": # Join Group Command
+                    if groupname in groups:
+                        groups[groupname].add(sender)
+                        connectionSocket.send(json.dumps({"status": "info", "text": f"Joined group '{groupname}'."}).encode())
+                    else:
+                        connectionSocket.send(json.dumps({"status": "error", "text": f"Group '{groupname}' does not exist."}).encode())
+                elif command == "list": # List Group Command
+                    if groups:
+                        group_list = ", ".join(groups.keys())
+                        connectionSocket.send(json.dumps({"status": "info", "text": f"Available groups: {group_list}."}).encode())
+                    else:
+                        connectionSocket.send(json.dumps({"status": "info", "text": "No groups available."}).encode())
+                elif command == "leave": # Leave Group Command
+                    if groupname in groups and sender in groups[groupname]:
+                        groups[groupname].remove(sender)
+                        connectionSocket.send(json.dumps({"status": "info", "text": f"Left group '{groupname}'."}).encode())
+                    else:
+                        connectionSocket.send(json.dumps({"status": "error", "text": f"You are not in group '{groupname}'."}).encode())
+                continue  # Skip further processing for this message
     except Exception as e:
         print(f"An error occurred while handling client {addr}: {e}") # Log any exceptions that occur while handling the client
 

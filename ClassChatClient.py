@@ -60,6 +60,18 @@ while True:
         group_input = input('Group Command (Command or Message): ').strip() #User/Client Input for group message type
         if group_input.lower() == "command":
             command = input('Group Command (Create, Join, Leave, List): ').strip() #User/Client Input for group command if message type is group command
+            if command.strip().lower() == "create":
+                groupname = input('Group Name to Create: ').strip() #User/Client Input for group name if creating a group
+                if not groupname:
+                    continue
+            if command.strip().lower() == "join":
+                groupname = input('Group Name to Join: ').strip() #User/Client Input for group name if joining a group
+                if not groupname:
+                    continue
+            if command.strip().lower() == "leave":
+                continue #No additional input needed for leave command, as the server can determine the group to leave based on the user's current group memberships
+            if command.strip().lower() == "list":
+                continue #No additional input needed for list command, as the server will simply return a list of available groups
             if not command:
                 continue
             if command.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
@@ -113,7 +125,7 @@ while True:
             clientSocket.close()
             sys.exit()
     else:
-        receiver = input('To (username): ').strip() #User/Client Input for recipient of message
+        receiver = input('To (username or "all"): ').strip() #User/Client Input for recipient of message
         if not receiver:
             receiver = "all"
         messageText = input('Message: ').strip() #User/Client Input for message to send
@@ -154,7 +166,7 @@ while True:
     clientSocket.send(json.dumps(group_msg).encode())
 
 
-     #JSON Group Message Format Parsing and Sending to Server
+     #JSON Group Command Format Parsing and Sending to Server
     group_msg = {
         "status": "1",
         " type " :  type,
