@@ -45,6 +45,17 @@ def receive_messages(sock: socket) -> None:
                         print(f"[Error] Failed to save file: {e}")
                 else:
                     print("[System] File not saved.")
+            elif incoming_message.get("type") == "encrypted":
+                sender = incoming_message.get("sender")
+                encrypted_text = incoming_message.get("text")
+                print(f"\n[Encrypted Message] {sender} sent an encrypted message: {encrypted_text}")
+                RSA_Key = input("Enter the RSA key to decrypt the message: ").strip() # Prompt the user for the RSA key to decrypt the message
+                decrypted_text = cryptography.decrypt(encrypted_text, RSA_Key) # Attempt to decrypt the message using the RSA Key
+                print(f"[Decrypted Message] {sender}: {decrypted_text}")
+            elif incoming_message.get("type") == "offline_message":
+                sender = incoming_message.get("sender")
+                text = incoming_message.get("text")
+                print(f"\n[Offline Message] {sender}: {text}")
             else:
                 sender = incoming_message.get("sender", "Unknown")
                 text = incoming_message.get("text", "")
@@ -145,6 +156,8 @@ while True:
         continue
     elif type.lower() == "encrypted":
         encrypted_message = input('Encrypted Message: ').strip() #User/Client Input for encrypted message if message type is encrypted
+        AES_Key = cryptography.generate_key() # Generate an encryption key
+        encrypted_message = cryptography.encrypt(encrypted_message, AES_Key) # Encrypt the message using the AES key
         if not encrypted_message:
             continue
         if encrypted_message.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
@@ -196,3 +209,12 @@ while True:
         }
         clientSocket.send(json.dumps(msg).encode())
         continue
+
+def send_group_message_to_user(username, groupname, sender, message):
+    group_msg = {
+        "type": "group_message",
+        "group": groupname,
+        "sender": sender,
+        "text": message
+    }
+    clientSocket.send(json.dumps(group_msg).encode())

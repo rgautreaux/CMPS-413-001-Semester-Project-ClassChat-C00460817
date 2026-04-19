@@ -3,6 +3,10 @@ import json
 import cryptography
 from socket import socket, AF_INET, SOCK_STREAM
 from typing import Tuple, List
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+import os, base64
 
 serverPort = 12000
 serverSocket: socket = socket(AF_INET, SOCK_STREAM)
@@ -17,6 +21,14 @@ groups = {} # Dictionary to map group names to lists of member usernames
 offline_messages = {} # Dictionary to store offline messages for users
 users: dict[str, socket.socket] = {}
 messages: list[str] = []
+
+# Generate RSA key pair (once, at server startup)
+private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+public_key = private_key.public_key()
+public_pem = public_key.public_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PublicFormat.SubjectPublicKeyInfo
+)
 
 def broadcast_message(message: str, sender_socket: socket) -> None:
     with clients_lock: # Ensure thread-safe access to the clients list when broadcasting messages
@@ -212,11 +224,12 @@ def send_message_to_user(username: str, sender: str, message: str) -> None:
             pass
 
 def encrypt_message(message: str) -> str:
-    cryptography.generate_key() # Generate an encryption key
-    return cryptography.encrypt(message)
+    RSA_Key = cryptography.generate_key() # Generate an encryption key
+    connectionSocket.send(json.dumps({"status": "info", "text": f"The server encryption key: {RSA_Key}"}).encode()) # Send the encryption key to the client
+    return cryptography.encrypt(message, RSA_Key)
 
-def decrypt_message(encrypted_message: str) -> str:
-    return cryptography.decrypt(encrypted_message)
+def decrypt_message(encrypted_message: str, RSA_Key: str) -> str:
+    return cryptography.decrypt(encrypted_message, RSA_Key)
 
 while True:
     connectionSocket, addr = serverSocket.accept() # Wait for a new client to connect
