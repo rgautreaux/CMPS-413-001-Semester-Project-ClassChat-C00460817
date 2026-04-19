@@ -4,6 +4,10 @@ import sys
 import json
 import base64
 import cryptography
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+import os
 
 #Server Message Receiving Thread
 def receive_messages(sock: socket) -> None:
@@ -47,11 +51,12 @@ def receive_messages(sock: socket) -> None:
                     print("[System] File not saved.")
             elif incoming_message.get("type") == "encrypted":
                 sender = incoming_message.get("sender")
-                encrypted_text = incoming_message.get("text")
-                print(f"\n[Encrypted Message] {sender} sent an encrypted message: {encrypted_text}")
-                RSA_Key = input("Enter the RSA key to decrypt the message: ").strip() # Prompt the user for the RSA key to decrypt the message
-                decrypted_text = cryptography.decrypt(encrypted_text, RSA_Key) # Attempt to decrypt the message using the RSA Key
-                print(f"[Decrypted Message] {sender}: {decrypted_text}")
+                encrypted_text = base64.b64decode(incoming_message.get("text"))
+                iv = base64.b64decode(incoming_message.get("iv"))
+                cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
+                decryptor = cipher.decryptor()
+                decrypted_text = decryptor.update(encrypted_text) + decryptor.finalize()
+                print(f"\n[Decrypted Message] {sender}: {decrypted_text.decode()}")
             elif incoming_message.get("type") == "offline_message":
                 sender = incoming_message.get("sender")
                 text = incoming_message.get("text")
@@ -71,11 +76,28 @@ serverPort = 12000 #Port Number
 clientSocket = socket(AF_INET, SOCK_STREAM) #TCP Client Socket
 clientSocket.connect((serverName,serverPort)) #Socket Connection
 
+server_public_key = None
+session_key = None
 
 #Username Input and Sending to Server
 username = input('Input your Username:') #User/Client Input
 clientSocket.send(username.encode()) #Send username to server
 
+# Receive server's public key
+while True:
+    message = clientSocket.recv(4096)
+    incoming_message = json.loads(message.decode())
+    if incoming_message.get("text") == "SERVER_PUBLIC_KEY":
+        server_public_key = serialization.load_pem_public_key(incoming_message.get("key").encode())
+        break
+
+# Generate AES session key
+session_key = os.urandom(32)  # 256-bit key
+encrypted_session_key = server_public_key.encrypt(
+    session_key,
+    padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
+)
+clientSocket.send(json.dumps({"type": "session_key", "key": base64.b64encode(encrypted_session_key).decode()}).encode())
 
 #Message Receiving Thread
 threading.Thread(target=receive_messages, args=(clientSocket,), daemon=True).start() #Start thread to receive server messages
@@ -155,22 +177,13 @@ while True:
         clientSocket.send(json.dumps(offline_msg).encode())
         continue
     elif type.lower() == "encrypted":
-        encrypted_message = input('Encrypted Message: ').strip() #User/Client Input for encrypted message if message type is encrypted
-        AES_Key = cryptography.generate_key() # Generate an encryption key
-        encrypted_message = cryptography.encrypt(encrypted_message, AES_Key) # Encrypt the message using the AES key
-        if not encrypted_message:
-            continue
-        if encrypted_message.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-            print("[System] Disconnecting from server...")
-            clientSocket.close()
-            sys.exit()
-        encrypted_msg = {
-            "type": "encrypted",
-            "sender": username,
-            "text": encrypted_message
-        }
-        clientSocket.send(json.dumps(encrypted_msg).encode())
-        continue
+        sender = incoming_message.get("sender")
+        encrypted_text = base64.b64decode(incoming_message.get("text"))
+        iv = base64.b64decode(incoming_message.get("iv"))
+        cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
+        decryptor = cipher.decryptor()
+        decrypted_text = decryptor.update(encrypted_text) + decryptor.finalize()
+        print(f"\n[Decrypted Message] {sender}: {decrypted_text.decode()}")
     elif type.lower() == "private":
         receiver = input('To (username): ').strip() #User/Client Input for recipient of message
         if not receiver:
