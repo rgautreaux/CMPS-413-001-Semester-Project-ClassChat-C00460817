@@ -2,6 +2,7 @@ from socket import socket, AF_INET, SOCK_STREAM
 import threading
 import sys
 import json
+import base64
 
 #Server Message Receiving Thread
 def receive_messages(sock: socket) -> None:
@@ -33,6 +34,16 @@ def receive_messages(sock: socket) -> None:
                 filename = incoming_message.get("filename")
                 filedata = incoming_message.get("filedata")
                 print(f"\n[File Transfer] {sender} sent a file '{filename}' with data: {filedata}")
+                save = input(f"Do you want to save '{filename}'? (y/n): ").strip().lower()
+                if save == "y":
+                    try:
+                        with open(filename, "wb") as f:
+                            f.write(base64.b64decode(filedata))
+                        print(f"[System] File '{filename}' saved successfully.")
+                    except Exception as e:
+                        print(f"[Error] Failed to save file: {e}")
+                else:
+                    print("[System] File not saved.")
             else:
                 sender = incoming_message.get("sender", "Unknown")
                 text = incoming_message.get("text", "")
@@ -87,6 +98,9 @@ while True:
             clientSocket.send(json.dumps(group_msg).encode())
             continue
     elif type.lower() == "file_transfer":
+        receiver = input('To (username): ').strip() #User/Client Input for recipient of file
+        if not receiver:
+            continue
         filename = input('Filename: ').strip() #User/Client Input for filename if message type is file transfer
         if not filename:
             continue
@@ -100,6 +114,7 @@ while True:
         file_msg = {
             "type": "file_transfer",
             "sender": username,
+            "receiver": receiver,
             "filename": filename,
             "filedata": filedata
         }
