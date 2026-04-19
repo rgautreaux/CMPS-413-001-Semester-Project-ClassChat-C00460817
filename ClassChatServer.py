@@ -94,9 +94,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                         error_msg = {"status": "error", "text": f"User '{receiver}' is not online."} # If the intended recipient is not online, let the user know
                         connectionSocket.send(json.dumps(error_msg).encode())
             elif message_parse.get("type") == "broadcast":
-                receiver = message_parse.get("receiver", "").strip()
-                if receiver and receiver.lower() != "all":
-                    broadcast_message(message.decode(), connectionSocket)
+                broadcast_message(message.decode(), connectionSocket)
             else: #If not intended for a specific person, broadcast message to all active users
                 broadcast_message(message.decode(), connectionSocket)
     except Exception as e:

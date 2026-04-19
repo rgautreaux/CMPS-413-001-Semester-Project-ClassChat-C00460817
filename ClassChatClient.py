@@ -1,4 +1,3 @@
-from email import message
 from socket import socket, AF_INET, SOCK_STREAM
 import threading
 import sys
@@ -164,26 +163,7 @@ while True:
         msg = {
             "type": "broadcast",
             "sender": username,
-            "receiver": receiver,
-            "text": messageText
-        }
-        clientSocket.send(json.dumps(msg).encode())
-        continue
-    else:
-        receiver = input('To (username or "all"): ').strip() #User/Client Input for recipient of message
-        if not receiver:
-            receiver = "all"
-        messageText = input('Message: ').strip() #User/Client Input for message to send
-        if not messageText:
-            continue
-        if messageText.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-            print("[System] Disconnecting from server...")
-            clientSocket.close()
-            sys.exit()
-        msg = {
-            "type": "broadcast",
-            "sender": username,
-            "receiver": receiver,
+            "receiver": "all",
             "text": messageText
         }
         clientSocket.send(json.dumps(msg).encode())
