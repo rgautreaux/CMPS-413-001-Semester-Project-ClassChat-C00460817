@@ -34,6 +34,15 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
             client_dictionary[username] = connectionSocket # Add the client and their username to the dictionary
             clients.append(connectionSocket) # Add the client to the list of connected clients
         
+        # Deliver any offline messages
+        if username in offline_messages:
+            for msg in offline_messages[username]:
+                try:
+                    connectionSocket.send(json.dumps(msg).encode())
+                except Exception:
+                    pass
+            del offline_messages[username]
+
         # Notify other clients about the new user (as info JSON)
         broadcast_message(json.dumps({"status": "info", "text": f"{username} has joined the chat."}), connectionSocket)
         # Send a welcome message to the new client (as info JSON)
@@ -85,7 +94,6 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                         print(f"An error occurred while handling group message: {e}")
                 else:
                     send_message_to_user(message_parse.get("sender"), f"Group '{groupname}' does not exist.")
-                    offline_messages.setdefault(receiver, []).append(message_parse)
             elif message_parse.get("type") == "file_transfer":
                  receiver = message_parse.get("receiver", "").strip()
                  if receiver in client_dictionary:
@@ -116,6 +124,13 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                         offline_messages.setdefault(receiver, []).append(message_parse)
             elif message_parse.get("type") == "broadcast":
                 broadcast_message(message.decode(), connectionSocket)
+            elif message_parse.get("type") == "offline_message":
+                receiver = message_parse.get("receiver", "").strip()
+                if receiver:
+                    if receiver in client_dictionary:
+                        client_dictionary[receiver].send(json.dumps(message_parse).encode())
+                    else:
+                        offline_messages.setdefault(receiver, []).append(message_parse)
             else: #If not intended for a specific person, broadcast message to all active users
                 broadcast_message(message.decode(), connectionSocket)
     except Exception as e:
@@ -157,7 +172,16 @@ def handle_group_message(sender, groupname, message):
         for member in groups[groupname]:
             if member != sender:
                 # Send as a group_message type for proper client display
-                send_group_message_to_user(member, groupname, sender, message)
+                if member in client_dictionary:
+                    send_group_message_to_user(member, groupname, sender, message)
+                else:
+                    # Store as offline message for this member
+                    offline_messages.setdefault(member, []).append({
+                        "type": "group_message",
+                        "group": groupname,
+                        "sender": sender,
+                        "text": message
+                    })
     else:
         send_message_to_user(sender, "You are not a member of this group.")
 
@@ -172,11 +196,6 @@ def send_group_message_to_user(username, groupname, sender, message):
             }).encode())
         except Exception:
             pass
-    else:
-        if username in offline_messages:
-            for msg in offline_messages[username]:
-                connectionSocket.send(json.dumps(msg).encode())
-            del offline_messages[username]
 
 def send_message_to_user(username, message):
     if username in client_dictionary:
@@ -184,11 +203,6 @@ def send_message_to_user(username, message):
             client_dictionary[username].send(json.dumps({"status": "info", "text": message}).encode())
         except Exception:
             pass
-    else:
-        if username in offline_messages:
-            for msg in offline_messages[username]:
-                connectionSocket.send(json.dumps(msg).encode())
-            del offline_messages[username]
 
 while True:
     connectionSocket, addr = serverSocket.accept() # Wait for a new client to connect
