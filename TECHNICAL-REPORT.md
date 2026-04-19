@@ -145,4 +145,9 @@ Even though this portion of the assignment was not mandatory to complete, I want
 ![alt text](evidence-screenshots/S5_Errors2.png)
 ![alt text](evidence-screenshots/S5_Errors3.png)
 
-Once this was done, VSCode identified various errors in the code, and I asked Copilot for assistance in diagnosing the source of these errors. It identified that the issues were due to Import errors, Attribute errors, Syntax errors, and Formatting Errors. Seeing how many errors there were, I had it then create a plan to fix these errors and then execute said plan.
+Once this was done, VSCode identified various errors in the code, and I asked Copilot for assistance in diagnosing the source of these errors. It identified that the issues were due to Import errors, Attribute errors, Syntax errors, and Formatting Errors. Seeing how many errors there were, I had it then create a plan to fix these errors and then execute said plan. I had it resolve these errors one by one, and after all errors were resolved I planned to run a final test to verify all features were working properly.
+
+---
+
+
+# 6 GUI and Testing
