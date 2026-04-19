@@ -124,6 +124,10 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                         offline_messages.setdefault(receiver, []).append(message_parse)
             elif message_parse.get("type") == "broadcast":
                 broadcast_message(message.decode(), connectionSocket)
+                # Store for offline users
+                for user in offline_messages:
+                    if user not in client_dictionary:
+                        offline_messages.setdefault(user, []).append(message_parse)
             elif message_parse.get("type") == "offline_message":
                 receiver = message_parse.get("receiver", "").strip()
                 if receiver:

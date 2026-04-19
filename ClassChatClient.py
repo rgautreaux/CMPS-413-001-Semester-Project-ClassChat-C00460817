@@ -124,6 +124,9 @@ while True:
         clientSocket.send(json.dumps(file_msg).encode())
         continue
     elif type.lower() == "offline_message":
+        receiver = input('To (username): ').strip() # Prompt for recipient
+        if not receiver:
+            continue
         offline_message = input('Offline Message: ').strip() #User/Client Input for offline message if message type is offline message
         if not offline_message:
             continue
@@ -134,6 +137,7 @@ while True:
         offline_msg = {
             "type": "offline_message",
             "sender": username,
+            "receiver": receiver,
             "text": offline_message
         }
         clientSocket.send(json.dumps(offline_msg).encode())
