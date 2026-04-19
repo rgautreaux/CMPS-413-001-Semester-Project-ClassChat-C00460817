@@ -1,5 +1,6 @@
 import threading
 import json
+import cryptography
 from socket import socket, AF_INET, SOCK_STREAM
 from typing import Tuple, List
 
@@ -14,6 +15,8 @@ client_dictionary: dict[str, socket] = {} # Dictionary to map usernames to their
 clients_lock: threading.Lock = threading.Lock() # Lock to ensure thread-safe access 
 groups = {} # Dictionary to map group names to lists of member usernames
 offline_messages = {} # Dictionary to store offline messages for users
+users: dict[str, socket.socket] = {}
+messages: list[str] = []
 
 def broadcast_message(message: str, sender_socket: socket) -> None:
     with clients_lock: # Ensure thread-safe access to the clients list when broadcasting messages
@@ -201,12 +204,19 @@ def send_group_message_to_user(username, groupname, sender, message):
         except Exception:
             pass
 
-def send_message_to_user(username, message):
+def send_message_to_user(username: str, sender: str, message: str) -> None:
     if username in client_dictionary:
         try:
             client_dictionary[username].send(json.dumps({"status": "info", "text": message}).encode())
         except Exception:
             pass
+
+def encrypt_message(message: str) -> str:
+    cryptography.generate_key() # Generate an encryption key
+    return cryptography.encrypt(message)
+
+def decrypt_message(encrypted_message: str) -> str:
+    return cryptography.decrypt(encrypted_message)
 
 while True:
     connectionSocket, addr = serverSocket.accept() # Wait for a new client to connect

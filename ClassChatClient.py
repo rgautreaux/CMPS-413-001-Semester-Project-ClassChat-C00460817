@@ -3,6 +3,7 @@ import threading
 import sys
 import json
 import base64
+import cryptography
 
 #Server Message Receiving Thread
 def receive_messages(sock: socket) -> None:
