@@ -280,15 +280,15 @@ def send_group_message_to_user(username, groupname, sender, message):
                 "sender": sender,
                 "text": message
             }).encode())
-        except Exception:
-            pass
+        except (OSError, ValueError, json.JSONDecodeError):
+            print(f"[Warning] Failed to send group message to {username}.")
 
 def send_message_to_user(username: str, sender: str, message: str) -> None:
     if username in client_dictionary:
         try:
             client_dictionary[username].send(json.dumps({"status": "info", "text": message}).encode())
-        except Exception:
-            pass
+        except (OSError, ValueError, json.JSONDecodeError):
+            print(f"[Warning] Failed to send info message to {username}.")
 
 while True:
     connectionSocket, addr = serverSocket.accept() # Wait for a new client to connect
