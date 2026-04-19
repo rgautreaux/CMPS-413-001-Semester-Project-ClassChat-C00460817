@@ -13,6 +13,7 @@ clients: List[socket] = [] # List to keep track of connected client sockets
 client_dictionary: dict[str, socket] = {} # Dictionary to map usernames to their sockets
 clients_lock: threading.Lock = threading.Lock() # Lock to ensure thread-safe access 
 groups = {} # Dictionary to map group names to lists of member usernames
+offline_messages = {} # Dictionary to store offline messages for users
 
 def broadcast_message(message: str, sender_socket: socket) -> None:
     with clients_lock: # Ensure thread-safe access to the clients list when broadcasting messages
@@ -74,11 +75,17 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                         connectionSocket.send(json.dumps({"status": "error", "text": f"You are not in group '{groupname}'."}).encode())
                 continue  # Skip further processing for this message
             elif message_parse.get("type") == "group_message":
-                groupname = message_parse.get("group")
-                sender = message_parse.get("sender")
-                text = message_parse.get("text")
-                handle_group_message(sender, groupname, text)
-                continue  # Skip further processing for this message
+                groupname = message_parse.get("group").strip()
+                if groupname in groups:
+                    try:
+                        sender = message_parse.get("sender")
+                        text = message_parse.get("text")
+                        handle_group_message(sender, groupname, text)
+                    except Exception as e:
+                        print(f"An error occurred while handling group message: {e}")
+                else:
+                    send_message_to_user(message_parse.get("sender"), f"Group '{groupname}' does not exist.")
+                    offline_messages.setdefault(receiver, []).append(message_parse)
             elif message_parse.get("type") == "file_transfer":
                  receiver = message_parse.get("receiver", "").strip()
                  if receiver in client_dictionary:
@@ -87,11 +94,12 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                         filename = message_parse.get("filename")
                         filedata = message_parse.get("filedata")
                         file_transfer(sender, receiver, filename, filedata)
-                    except Exception:
+                    except Exception as e:
+                        print(f"An error occurred while handling file transfer: {e}")
                         pass
-                    else:
-                        error_msg = {"status": "error", "text": f"User '{receiver}' is not online."} # If the intended recipient is not online, let the user know
-                        connectionSocket.send(json.dumps(error_msg).encode())
+                 else:
+                    send_message_to_user(message_parse.get("sender"), f"User '{receiver}' is not online. File transfer failed.")
+                    offline_messages.setdefault(receiver, []).append(message_parse)
             elif message_parse.get("type") == "private_message":
                 receiver = message_parse.get("receiver", "").strip()
                 if receiver and receiver.lower() != "all":
@@ -104,8 +112,8 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                         except Exception:
                             pass
                     else:
-                        error_msg = {"status": "error", "text": f"User '{receiver}' is not online."} # If the intended recipient is not online, let the user know
-                        connectionSocket.send(json.dumps(error_msg).encode())
+                        send_message_to_user(message_parse.get("sender"), f"User '{receiver}' is not online. Message delivery failed.")
+                        offline_messages.setdefault(receiver, []).append(message_parse)
             elif message_parse.get("type") == "broadcast":
                 broadcast_message(message.decode(), connectionSocket)
             else: #If not intended for a specific person, broadcast message to all active users
@@ -119,6 +127,9 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                 clients.remove(connectionSocket)
             if username in client_dictionary:
                 del client_dictionary[username]
+            else:
+                print(f"Warning: Username '{username}' not found in client dictionary during cleanup.")
+                offline_messages.pop(username, None) # Add offline users to offline messages
         # Remove user from all groups
         for group in groups.values():
             group.discard(username)
@@ -161,6 +172,11 @@ def send_group_message_to_user(username, groupname, sender, message):
             }).encode())
         except Exception:
             pass
+    else:
+        if username in offline_messages:
+            for msg in offline_messages[username]:
+                connectionSocket.send(json.dumps(msg).encode())
+            del offline_messages[username]
 
 def send_message_to_user(username, message):
     if username in client_dictionary:
@@ -168,6 +184,11 @@ def send_message_to_user(username, message):
             client_dictionary[username].send(json.dumps({"status": "info", "text": message}).encode())
         except Exception:
             pass
+    else:
+        if username in offline_messages:
+            for msg in offline_messages[username]:
+                connectionSocket.send(json.dumps(msg).encode())
+            del offline_messages[username]
 
 while True:
     connectionSocket, addr = serverSocket.accept() # Wait for a new client to connect
