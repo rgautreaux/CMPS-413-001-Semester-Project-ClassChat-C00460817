@@ -40,27 +40,29 @@ def broadcast_message(message: str, sender_socket: socket) -> None:
                 except Exception:
                     pass # If there's an error sending the message (e.g., client disconnected), ignore it and continue broadcasting to other clients
 
-def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # Removed username argument
+def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
     username = "<unknown>"  # Initialize before try to avoid unbound variable
-    
+
     try:
+        # Step 1: Receive the username from the client
         username = connectionSocket.recv(1024).decode().strip() # Expecting the first message to be the username
         print(f"Received from client {addr}: {username}") # Log the username received from the client
         with clients_lock:
             client_dictionary[username] = connectionSocket # Add the client and their username to the dictionary
             clients.append(connectionSocket) # Add the client to the list of connected clients
-        
-        # Send the server's public key to the client
+
+        # Step 2: Send the server's public key to the client for secure key exchange
         connectionSocket.send(json.dumps({
             "text": "SERVER_PUBLIC_KEY",
             "key": public_pem.decode()
         }).encode())
 
-        # Receive the encrypted session key from the client
+        # Step 3: Receive the encrypted session key from the client
         message = connectionSocket.recv(4096)
         message_parse = json.loads(message.decode())
         if message_parse.get("type") == "session_key":
             encrypted_session_key = base64.b64decode(message_parse.get("key"))
+            # Decrypt the session key using the server's private RSA key
             session_key = private_key.decrypt(
                 encrypted_session_key,
                 padding.OAEP(
@@ -69,13 +71,14 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                     label=None
                 )
             )
-            client_session_keys[username] = session_key
+            client_session_keys[username] = session_key # Store the session key for this client
+            print(f"[Key Exchange] Session key established for {username}")
         else:
             # Handle error: session key not received
             connectionSocket.send(json.dumps({"status": "error", "text": "Session key not received."}).encode())
             return
-        
-        # Deliver any offline messages
+
+        # Step 4: Deliver any offline messages to the client
         if username in offline_messages:
             for msg in offline_messages[username]:
                 try:
@@ -84,19 +87,23 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                     pass
             del offline_messages[username]
 
-        # Notify other clients about the new user (as info JSON)
+        # Step 5: Notify other clients about the new user (as info JSON)
         broadcast_message(json.dumps({"status": "info", "text": f"{username} has joined the chat."}), connectionSocket)
         # Send a welcome message to the new client (as info JSON)
         connectionSocket.send(json.dumps({"status": "info", "text": f"Welcome to ClassChat, {username}!"}).encode())
         connectionSocket.send(json.dumps({"status": "ACK", "message": "Connection Established."}).encode()) # Send acknowledgment to the client that the connection is established
         connectionSocket.send(json.dumps({"status": "info", "text": "To message a specific user, type '@username message'. To message all users, just type your message."}).encode())
         connectionSocket.send(json.dumps({"status": "info", "text": "Type 'exit' to disconnect from the server."}).encode())
+
+        # Step 6: Main message loop - handle all incoming messages from this client
         while True: # Continuously listen for messages from the client
             message = connectionSocket.recv(1024) # Receive a message from the client
-            if not message: 
+            if not message:
                 break # If the client has disconnected, exit the loop
-            message_parse = json.loads(message.decode()) # Attempt to parse the message as JSON 
-            if message_parse.get("type") == "group_command": #checks if the message was a group command
+            message_parse = json.loads(message.decode()) # Attempt to parse the message as JSON
+
+            # Handle group commands, group messages, file transfers, etc. (existing logic)
+            if message_parse.get("type") == "group_command":
                 command = message_parse.get("command")
                 groupname = message_parse.get("group")
                 sender = message_parse.get("sender")
@@ -192,12 +199,16 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                 except Exception as e:
                     print(f"[Error] Failed to decrypt message from {username}: {e}")
                     continue
-            else: #If not intended for a specific person, broadcast message to all active users
+
+            else:
+                # If not intended for a specific person, broadcast message to all active users
                 broadcast_message(message.decode(), connectionSocket)
+
     except Exception as e:
         print(f"An error occurred while handling client {addr}: {e}") # Log any exceptions that occur while handling the client
 
     finally:
+        # Step 8: Cleanup on disconnect
         with clients_lock:
             if connectionSocket in clients:
                 clients.remove(connectionSocket)
