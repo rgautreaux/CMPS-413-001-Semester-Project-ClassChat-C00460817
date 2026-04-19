@@ -50,22 +50,12 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
             client_dictionary[username] = connectionSocket # Add the client and their username to the dictionary
             clients.append(connectionSocket) # Add the client to the list of connected clients
         
-        # Deliver any offline messages
-        if username in offline_messages:
-            for msg in offline_messages[username]:
-                try:
-                    connectionSocket.send(json.dumps(msg).encode())
-                except Exception:
-                    pass
-            del offline_messages[username]
+        # Send the server's public key to the client
+        connectionSocket.send(json.dumps({
+            "text": "SERVER_PUBLIC_KEY",
+            "key": public_pem.decode()
+        }).encode())
 
-        # Notify other clients about the new user (as info JSON)
-        broadcast_message(json.dumps({"status": "info", "text": f"{username} has joined the chat."}), connectionSocket)
-        # Send a welcome message to the new client (as info JSON)
-        connectionSocket.send(json.dumps({"status": "info", "text": f"Welcome to ClassChat, {username}!"}).encode())
-        connectionSocket.send(json.dumps({"status": "ACK", "message": "Connection Established."}).encode()) # Send acknowledgment to the client that the connection is established
-        connectionSocket.send(json.dumps({"status": "info", "text": "To message a specific user, type '@username message'. To message all users, just type your message."}).encode())
-        connectionSocket.send(json.dumps({"status": "info", "text": "Type 'exit' to disconnect from the server."}).encode())
         # Receive the encrypted session key from the client
         message = connectionSocket.recv(4096)
         message_parse = json.loads(message.decode())
@@ -84,11 +74,23 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
             # Handle error: session key not received
             connectionSocket.send(json.dumps({"status": "error", "text": "Session key not received."}).encode())
             return
-        # Send the server's public key to the client
-        connectionSocket.send(json.dumps({
-            "text": "SERVER_PUBLIC_KEY",
-            "key": public_pem.decode()
-        }).encode())
+        
+        # Deliver any offline messages
+        if username in offline_messages:
+            for msg in offline_messages[username]:
+                try:
+                    connectionSocket.send(json.dumps(msg).encode())
+                except Exception:
+                    pass
+            del offline_messages[username]
+
+        # Notify other clients about the new user (as info JSON)
+        broadcast_message(json.dumps({"status": "info", "text": f"{username} has joined the chat."}), connectionSocket)
+        # Send a welcome message to the new client (as info JSON)
+        connectionSocket.send(json.dumps({"status": "info", "text": f"Welcome to ClassChat, {username}!"}).encode())
+        connectionSocket.send(json.dumps({"status": "ACK", "message": "Connection Established."}).encode()) # Send acknowledgment to the client that the connection is established
+        connectionSocket.send(json.dumps({"status": "info", "text": "To message a specific user, type '@username message'. To message all users, just type your message."}).encode())
+        connectionSocket.send(json.dumps({"status": "info", "text": "Type 'exit' to disconnect from the server."}).encode())
         while True: # Continuously listen for messages from the client
             message = connectionSocket.recv(1024) # Receive a message from the client
             if not message: 
@@ -186,22 +188,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                     decryptor = cipher.decryptor()
                     plaintext = decryptor.update(ciphertext) + decryptor.finalize()
                     print(f"[Decrypted Message from {username}]: {plaintext.decode()}")
-                    # Broadcast the decrypted message to other users (encrypted or plaintext as needed)
-                    for recipient, sock in client_dictionary.items():
-                        if recipient != username and recipient in client_session_keys:
-                            recipient_key = client_session_keys[recipient]
-                            new_iv = os.urandom(16)
-                            cipher = Cipher(algorithms.AES(recipient_key), modes.CFB(new_iv))
-                            encryptor = cipher.encryptor()
-                            new_ciphertext = encryptor.update(plaintext) + encryptor.finalize()
-                            encrypted_msg = {
-                                "type": "encrypted",
-                                "sender": username,
-                                "iv": base64.b64encode(new_iv).decode(),
-                                "text": base64.b64encode(new_ciphertext).decode()
-                            }
-                            sock.send(json.dumps(encrypted_msg).encode())
-                    continue
+                    # Optionally, broadcast or handle the plaintext as needed
                 except Exception as e:
                     print(f"[Error] Failed to decrypt message from {username}: {e}")
                     continue

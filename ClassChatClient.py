@@ -177,13 +177,21 @@ while True:
         clientSocket.send(json.dumps(offline_msg).encode())
         continue
     elif type.lower() == "encrypted":
-        sender = incoming_message.get("sender")
-        encrypted_text = base64.b64decode(incoming_message.get("text"))
-        iv = base64.b64decode(incoming_message.get("iv"))
+        plaintext = input('Encrypted Message: ').strip()
+        if not plaintext:
+            continue
+        iv = os.urandom(16)
         cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
-        decryptor = cipher.decryptor()
-        decrypted_text = decryptor.update(encrypted_text) + decryptor.finalize()
-        print(f"\n[Decrypted Message] {sender}: {decrypted_text.decode()}")
+        encryptor = cipher.encryptor()
+        ciphertext = encryptor.update(plaintext.encode()) + encryptor.finalize()
+        encrypted_msg = {
+            "type": "encrypted",
+            "sender": username,
+            "iv": base64.b64encode(iv).decode(),
+            "text": base64.b64encode(ciphertext).decode()
+        }
+        clientSocket.send(json.dumps(encrypted_msg).encode())
+        continue
     elif type.lower() == "private":
         receiver = input('To (username): ').strip() #User/Client Input for recipient of message
         if not receiver:
