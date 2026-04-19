@@ -79,6 +79,19 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
                 text = message_parse.get("text")
                 handle_group_message(sender, groupname, text)
                 continue  # Skip further processing for this message
+            elif message_parse.get("type") == "file_transfer":
+                 receiver = message_parse.get("receiver", "").strip()
+                 if receiver in client_dictionary:
+                    try:
+                        sender = message_parse.get("sender")
+                        filename = message_parse.get("filename")
+                        filedata = message_parse.get("filedata")
+                        file_transfer(sender, receiver, filename, filedata)
+                    except Exception:
+                        pass
+                    else:
+                        error_msg = {"status": "error", "text": f"User '{receiver}' is not online."} # If the intended recipient is not online, let the user know
+                        connectionSocket.send(json.dumps(error_msg).encode())
             elif message_parse.get("type") == "private_message":
                 receiver = message_parse.get("receiver", "").strip()
                 if receiver and receiver.lower() != "all":
@@ -112,6 +125,21 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:  # R
         broadcast_message(json.dumps({"status": "info", "text": f"{username}@{addr} has left the chat."}), connectionSocket)
         print(f"Connection with client {addr} closed.")
         connectionSocket.close()
+
+def file_transfer(sender, receiver, filename, filedata):
+    if receiver in client_dictionary:
+        try:
+            client_dictionary[receiver].send(json.dumps({
+                "type": "file_transfer",
+                "sender": sender,
+                "filename": filename,
+                "filedata": filedata
+            }).encode())
+        except Exception:
+            pass
+    else:
+        send_message_to_user(sender, f"User '{receiver}' is not online. File transfer failed.")
+
 
 def handle_group_message(sender, groupname, message):
     if groupname in groups and sender in groups[groupname]:

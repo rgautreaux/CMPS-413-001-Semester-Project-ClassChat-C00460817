@@ -28,6 +28,11 @@ def receive_messages(sock: socket) -> None:
                 sender = incoming_message.get("sender")
                 text = incoming_message.get("text")
                 print(f"\n[{group}] {sender}: {text}")
+            elif incoming_message.get("type") == "file_transfer":
+                sender = incoming_message.get("sender")
+                filename = incoming_message.get("filename")
+                filedata = incoming_message.get("filedata")
+                print(f"\n[File Transfer] {sender} sent a file '{filename}' with data: {filedata}")
             else:
                 sender = incoming_message.get("sender", "Unknown")
                 text = incoming_message.get("text", "")
@@ -54,7 +59,7 @@ threading.Thread(target=receive_messages, args=(clientSocket,), daemon=True).sta
 while True:
     print("To message a specific user, type '@username message'. To message all users, just type your message.")
     print("Type 'exit' to disconnect from the server.")
-    type = input('Message Type (Group, Private, File Transfer, Offline, Encrypted): ').strip() #User/Client Input for recipient of message
+    type = input('Message Type (Group, Private, File_Transfer, Offline_Message, Encrypted): ').strip() #User/Client Input for recipient of message
     if not type:
         type = "broadcast"
     if type.lower() == "group": #User/Client Input for group command or message
@@ -81,7 +86,7 @@ while True:
             }
             clientSocket.send(json.dumps(group_msg).encode())
             continue
-    elif type.lower() == "file transfer":
+    elif type.lower() == "file_transfer":
         filename = input('Filename: ').strip() #User/Client Input for filename if message type is file transfer
         if not filename:
             continue
@@ -100,7 +105,7 @@ while True:
         }
         clientSocket.send(json.dumps(file_msg).encode())
         continue
-    elif type.lower() == "offline message":
+    elif type.lower() == "offline_message":
         offline_message = input('Offline Message: ').strip() #User/Client Input for offline message if message type is offline message
         if not offline_message:
             continue
