@@ -1,12 +1,12 @@
 import threading
 import json
-import cryptography
 from socket import socket, AF_INET, SOCK_STREAM
 from typing import Tuple, List
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-import os, base64
+import os
+import base64
 
 serverPort = 12000
 serverSocket: socket = socket(AF_INET, SOCK_STREAM)
@@ -19,7 +19,7 @@ client_dictionary: dict[str, socket] = {} # Dictionary to map usernames to their
 clients_lock: threading.Lock = threading.Lock() # Lock to ensure thread-safe access 
 groups = {} # Dictionary to map group names to lists of member usernames
 offline_messages = {} # Dictionary to store offline messages for users
-users: dict[str, socket.socket] = {}
+users: dict[str, socket] = {}
 messages: list[str] = []
 client_session_keys = {}  # Maps username to their AES session key
 
@@ -143,8 +143,8 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                 else:
                     send_message_to_user(message_parse.get("sender"), f"Group '{groupname}' does not exist.")
             elif message_parse.get("type") == "file_transfer":
-                 receiver = message_parse.get("receiver", "").strip()
-                 if receiver in client_dictionary:
+                receiver = message_parse.get("receiver", "").strip()
+                if receiver in client_dictionary:
                     try:
                         sender = message_parse.get("sender")
                         filename = message_parse.get("filename")
@@ -153,7 +153,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                     except Exception as e:
                         print(f"An error occurred while handling file transfer: {e}")
                         pass
-                 else:
+                else:
                     send_message_to_user(message_parse.get("sender"), f"User '{receiver}' is not online. File transfer failed.")
                     offline_messages.setdefault(receiver, []).append(message_parse)
             elif message_parse.get("type") == "private_message":

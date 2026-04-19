@@ -7,6 +7,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 import os
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
 def receive_messages(sock: socket) -> None:
     while True:
@@ -34,15 +35,15 @@ def receive_messages(sock: socket) -> None:
                 print(f"\n[{group}] {sender}: {text}")
             elif inc_msg.get("type") == "file_transfer":
                 sender = inc_msg.get("sender")
-                file_name = inc_msg.get("filename")
-                file_data = inc_msg.get("filedata")
-                print(f"\n[File Transfer] {sender} sent a file '{file_name}' with data: {file_data}")
-                save = input(f"Do you want to save '{file_name}'? (y/n): ").strip().lower()
+                incoming_filename = inc_msg.get("filename")
+                incoming_filedata = inc_msg.get("filedata")
+                print(f"\n[File Transfer] {sender} sent a file '{incoming_filename}' with data: {incoming_filedata}")
+                save = input(f"Do you want to save '{incoming_filename}'? (y/n): ").strip().lower()
                 if save == "y":
                     try:
-                        with open(file_name, "wb") as file_out:
-                            file_out.write(base64.b64decode(file_data))
-                        print(f"[System] File '{file_name}' saved successfully.")
+                        with open(incoming_filename, "wb") as incoming_file_out:
+                            incoming_file_out.write(base64.b64decode(incoming_filedata))
+                        print(f"[System] File '{incoming_filename}' saved successfully.")
                     except Exception as e:
                         print(f"[Error] Failed to save file: {e}")
                 else:
@@ -50,11 +51,14 @@ def receive_messages(sock: socket) -> None:
             elif inc_msg.get("type") == "encrypted":
                 sender = inc_msg.get("sender")
                 encrypted_text = base64.b64decode(inc_msg.get("text"))
-                iv_val = base64.b64decode(inc_msg.get("iv"))
-                cipher_obj = Cipher(algorithms.AES(session_key), modes.CFB(iv_val))
-                decryptor = cipher_obj.decryptor()
-                decrypted_text = decryptor.update(encrypted_text) + decryptor.finalize()
-                print(f"\n[Decrypted Message] {sender}: {decrypted_text.decode()}")
+                incoming_iv = base64.b64decode(inc_msg.get("iv"))
+                if session_key is not None:
+                    incoming_cipher = Cipher(algorithms.AES(session_key), modes.CFB(incoming_iv))
+                    decryptor = incoming_cipher.decryptor()
+                    decrypted_text = decryptor.update(encrypted_text) + decryptor.finalize()
+                    print(f"\n[Decrypted Message] {sender}: {decrypted_text.decode()}")
+                else:
+                    print("[Error] Session key is not set. Cannot decrypt message.")
             elif inc_msg.get("type") == "offline_message":
                 sender = inc_msg.get("sender")
                 text = inc_msg.get("text")
@@ -96,11 +100,15 @@ while True:
 
 # Generate AES session key
 session_key = os.urandom(32)  # 256-bit key
-encrypted_session_key = server_public_key.encrypt(
-    session_key,
-    padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
-)
-clientSocket.send(json.dumps({"type": "session_key", "key": base64.b64encode(encrypted_session_key).decode()}).encode())
+if isinstance(server_public_key, RSAPublicKey):
+    encrypted_session_key = server_public_key.encrypt(
+        session_key,
+        padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
+    )
+    clientSocket.send(json.dumps({"type": "session_key", "key": base64.b64encode(encrypted_session_key).decode()}).encode())
+else:
+    print("[Error] Server public key is not a valid RSA public key.")
+    sys.exit(1)
 
 #Message Receiving Thread
 threading.Thread(target=receive_messages, args=(clientSocket,), daemon=True).start() #Start thread to receive server messages
@@ -234,11 +242,11 @@ while True:
         clientSocket.send(json.dumps(msg).encode())
         continue
 
-def send_group_message_to_user(target_user: str, group_name: str, sender: str, message: str):
-    group_msg = {
+def send_group_message_to_user(group: str, sender: str, message: str):
+    group_message_obj = {
         "type": "group_message",
-        "group": group_name,
+        "group": group,
         "sender": sender,
         "text": message
     }
-    clientSocket.send(json.dumps(group_msg).encode())
+    clientSocket.send(json.dumps(group_message_obj).encode())
