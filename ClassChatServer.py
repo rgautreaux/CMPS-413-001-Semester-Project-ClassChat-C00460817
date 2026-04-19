@@ -195,7 +195,21 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                     decryptor = cipher.decryptor()
                     plaintext = decryptor.update(ciphertext) + decryptor.finalize()
                     print(f"[Decrypted Message from {username}]: {plaintext.decode()}")
-                    # Optionally, broadcast or handle the plaintext as needed
+                    # Broadcast the decrypted message to other users (encrypted for each recipient)
+                    for recipient, sock in client_dictionary.items():
+                        if recipient != username and recipient in client_session_keys:
+                            recipient_key = client_session_keys[recipient]
+                            new_iv = os.urandom(16)
+                            cipher = Cipher(algorithms.AES(recipient_key), modes.CFB(new_iv))
+                            encryptor = cipher.encryptor()
+                            new_ciphertext = encryptor.update(plaintext) + encryptor.finalize()
+                            encrypted_msg = {
+                                "type": "encrypted",
+                                "sender": username,
+                                "iv": base64.b64encode(new_iv).decode(),
+                                "text": base64.b64encode(new_ciphertext).decode()
+                            }
+                            sock.send(json.dumps(encrypted_msg).encode())
                 except Exception as e:
                     print(f"[Error] Failed to decrypt message from {username}: {e}")
                     continue
