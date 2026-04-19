@@ -104,8 +104,11 @@ while True:
         filename = input('Filename: ').strip() #User/Client Input for filename if message type is file transfer
         if not filename:
             continue
-        filedata = input('File Data (base64-encoded): ').strip() #User/Client Input for file data if message type is file transfer
-        if not filedata:
+        try:
+            with open(filename, "rb") as f:
+                filedata = base64.b64encode(f.read()).decode()
+        except Exception as e:
+            print(f"[Error] Could not read file: {e}")
             continue
         if filedata.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
