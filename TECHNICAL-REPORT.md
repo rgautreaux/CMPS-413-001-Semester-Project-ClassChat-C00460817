@@ -141,3 +141,8 @@ Seeing how this test was a success, I updated the `TRANSCRIPT.md` file to docume
 
 Even though this portion of the assignment was not mandatory to complete, I wanted to try implementing the Bonus Section of the project to further challenge myself and expand my knowledge/skills to get a better understanding on how to apply the skills we have been learning in class. After asking GitHub Copilot for a general overview of how to implement the bonus features, I used the provided guidance to begin implementing the Group Chat feature. As I have with previous steps, I tried to do as much of the implementation manually as possible, and used Copilot to review my code and identify problems to fix. I cycled through this process several times, and used the provided examples to guide my manual adjustments to the code. If I iterated too many times this way and errors still persisted, I allowed the editor to make changes to the specific sections that were still causing errors after my manual adjustments.
 
+![alt text](evidence-screenshots/S5_Errors1.png)
+![alt text](evidence-screenshots/S5_Errors2.png)
+![alt text](evidence-screenshots/S5_Errors3.png)
+
+Once this was done, VSCode identified various errors in the code, and I asked Copilot for assistance in diagnosing the source of these errors. It identified that the issues were due to Import errors, Attribute errors, Syntax errors, and Formatting Errors. Seeing how many errors there were, I had it then create a plan to fix these errors and then execute said plan.

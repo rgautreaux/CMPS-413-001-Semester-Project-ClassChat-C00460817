@@ -3467,3 +3467,1288 @@ This is optional and only needed if you want offline users to receive broadcasts
 
 If you want a full code example for any optional improvements, let me know!
 
+User: How close am I to completing Step 5.4  Encryption/Decryption Between Client and Server? Explain what remains to be done and how to implement these missing features:
+``` 
+ClassChat  server IP address and port are exposed in the network. The transmitted 
+messages have the potential risk of be captured by Wireshark. So we would like to 
+enhance ClassChat’s security by adding encryption and decryption in the transmitted 
+message. Please come up with a security model for ClassChat. Hint: use the public 
+and private key to generate and transmit session key.
+```
+
+GitHub Copilot: Based on your workspace and the provided instructions for Step 5.4 (Encryption/Decryption Between Client and Server), here’s an assessment and guidance:
+
+---
+
+## Current State
+
+- Your MessageFormat.json includes a `"type": "encrypted"` field, suggesting you have considered encrypted messages in your protocol.
+- There is no evidence (from the files listed or the JSON) that encryption/decryption logic or key exchange is implemented in either ClassChatClient.py or ClassChatServer.py.
+- No mention of cryptographic libraries (e.g., `cryptography`, `pycryptodome`) or key management in the visible files.
+
+---
+
+## What Remains to Be Done
+
+### 1. Security Model Design
+
+You need to:
+- Use asymmetric encryption (public/private keys) to securely exchange a session key.
+- Use the session key (symmetric encryption, e.g., AES) for encrypting/decrypting messages.
+
+### 2. Implementation Steps
+
+#### a. Key Generation and Exchange
+- **Server**: Generates a public/private key pair (RSA).
+- **Client**: On connection, retrieves the server’s public key.
+- **Client**: Generates a random session key (e.g., 256-bit for AES).
+- **Client**: Encrypts the session key with the server’s public key and sends it to the server.
+- **Server**: Decrypts the session key with its private key.
+
+#### b. Message Encryption/Decryption
+- **Both sides**: Use the session key to encrypt outgoing messages and decrypt incoming ones (AES-GCM or AES-CBC).
+- **Message Format**: For `"type": "encrypted"`, the `text` or `filedata` fields should contain the encrypted payload (base64-encoded).
+
+#### c. Integration
+- Update both ClassChatClient.py and ClassChatServer.py to:
+  - Perform key exchange on connection.
+  - Encrypt/decrypt messages as needed.
+  - Handle `"type": "encrypted"` messages.
+
+#### d. Error Handling & Fallback
+- Handle cases where encryption fails or keys are invalid.
+- Optionally, allow unencrypted messages for backward compatibility.
+
+---
+
+## How to Implement
+
+### Libraries
+- Use `cryptography` or `pycryptodome` for RSA and AES.
+
+### Example Flow
+
+**Client Side:**
+1. Generate AES session key.
+2. Get server’s RSA public key.
+3. Encrypt session key with RSA public key, send to server.
+4. Encrypt messages with AES session key, send as `"type": "encrypted"`.
+
+**Server Side:**
+1. Generate RSA key pair, share public key.
+2. Receive encrypted session key, decrypt with private key.
+3. Decrypt incoming messages with session key.
+
+---
+
+## What to Add in Code
+
+- Key generation and storage (server).
+- Key exchange logic (client and server).
+- AES encryption/decryption functions.
+- Update message send/receive logic to use encryption for `"type": "encrypted"`.
+
+---
+
+## Summary Table
+
+| Feature                        | Status      | Action Needed                                  |
+|--------------------------------|-------------|------------------------------------------------|
+| Message format for encryption  | Partially   | Already present in JSON                        |
+| Key generation (RSA)           | Not started | Implement in server                            |
+| Session key generation (AES)   | Not started | Implement in client                            |
+| Key exchange                   | Not started | Implement client→server exchange               |
+| AES encryption/decryption      | Not started | Implement in both client and server            |
+| Integration with message flow  | Not started | Update send/receive logic                      |
+
+---
+
+## Next Steps
+
+1. Add RSA key generation to the server.
+2. Add session key generation and exchange to the client.
+3. Implement AES encryption/decryption for messages.
+4. Update message handling to use encryption for `"type": "encrypted"`.
+
+If you want code examples or guidance for a specific step, let me know!
+
+User: I have attempted to apply these fixes usinghte provided examples as a guide.  Analyze the codebase and diagnose how much of the code is correct.  If not, explain how to fix/complete any incorrect/incomplete code (preserve all comment annotation for any fixes/examples you may provide)
+
+GitHub Copilot: Here’s a detailed analysis of your encryption/decryption implementation in both the client and server, along with what is correct, what is missing or incorrect, and how to fix it.
+
+---
+
+## 1. What’s Correct
+
+- **Message Format**: You have a `"type": "encrypted"` in your protocol, which is good.
+- **Client/Server Structure**: Both client and server have logic branches for handling `"encrypted"` messages.
+- **Use of JSON and base64**: File transfer and message serialization are handled properly.
+- **Threading and Socket Handling**: The basic chat logic is sound.
+
+---
+
+## 2. What’s Incorrect or Incomplete
+
+### a. Cryptography Usage
+
+- **No Real Cryptography**: The `cryptography` module is imported, but you are calling `cryptography.generate_key()`, `cryptography.encrypt()`, and `cryptography.decrypt()`, which do not exist in the standard `cryptography` library. These are not valid functions.
+- **No Key Exchange**: There is no implementation of public/private key generation, nor is there a secure session key exchange between client and server.
+- **No Real Encryption**: The code does not actually encrypt or decrypt any data. The “encryption” is just a placeholder.
+
+### b. Security Model
+
+- **No RSA/AES Hybrid**: The recommended model (RSA for key exchange, AES for message encryption) is not implemented.
+- **Key Handling**: The client asks the user to input an RSA key to decrypt, which is not secure or practical.
+
+### c. Integration
+
+- **No Key Storage**: No persistent or session-based storage of keys.
+- **No Secure Key Transmission**: The server “sends” the key in plaintext, which defeats the purpose of encryption.
+
+---
+
+## 3. How to Fix/Complete the Code
+
+### a. Use a Real Cryptography Library
+
+Use the `cryptography` package (install with `pip install cryptography`). You’ll need:
+- `Fernet` for symmetric encryption (easy, but not as flexible as AES directly)
+- `RSA` for asymmetric encryption (for key exchange)
+
+### b. Implement Key Exchange
+
+**Server:**
+- Generate an RSA key pair on startup.
+- Send the public key to the client when it connects.
+
+**Client:**
+- Generate a random AES session key.
+- Encrypt the AES key with the server’s public key and send it to the server.
+
+**Both:**
+- Use the AES key to encrypt/decrypt all `"encrypted"` messages.
+
+### c. Example Fixes (with Comments)
+
+Below is a high-level example of what you need to add or change. **Preserve your comments as shown.**
+
+#### Server (ClassChatServer.py)
+
+```python
+# Add at the top
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+import os, base64
+
+# Generate RSA key pair (once, at server startup)
+private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+public_key = private_key.public_key()
+public_pem = public_key.public_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PublicFormat.SubjectPublicKeyInfo
+)
+
+# In handle_client, after username is received:
+connectionSocket.send(json.dumps({"status": "info", "text": "SERVER_PUBLIC_KEY", "key": public_pem.decode()}).encode())
+
+# When receiving the AES key from the client:
+# (Add a new message type, e.g., "session_key")
+if message_parse.get("type") == "session_key":
+    encrypted_session_key = base64.b64decode(message_parse.get("key"))
+    session_key = private_key.decrypt(
+        encrypted_session_key,
+        padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
+    )
+    # Store session_key for this client (e.g., in a dict)
+    client_session_keys[username] = session_key
+    continue
+
+# For encrypted messages:
+if message_parse.get("type") == "encrypted":
+    session_key = client_session_keys.get(username)
+    if session_key:
+        iv = base64.b64decode(message_parse.get("iv"))
+        ciphertext = base64.b64decode(message_parse.get("text"))
+        cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
+        decryptor = cipher.decryptor()
+        plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+        # Now handle plaintext as needed
+```
+
+#### Client (ClassChatClient.py)
+
+```python
+# Add at the top
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+import os, base64
+
+# After connecting and receiving the server's public key:
+server_public_key = None
+while True:
+    message = clientSocket.recv(1024)
+    incoming_message = json.loads(message.decode())
+    if incoming_message.get("text") == "SERVER_PUBLIC_KEY":
+        server_public_key = serialization.load_pem_public_key(incoming_message.get("key").encode())
+        break
+
+# Generate AES session key
+session_key = os.urandom(32)  # 256-bit key
+encrypted_session_key = server_public_key.encrypt(
+    session_key,
+    padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
+)
+clientSocket.send(json.dumps({"type": "session_key", "key": base64.b64encode(encrypted_session_key).decode()}).encode())
+
+# When sending an encrypted message:
+iv = os.urandom(16)
+cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
+encryptor = cipher.encryptor()
+ciphertext = encryptor.update(message.encode()) + encryptor.finalize()
+encrypted_msg = {
+    "type": "encrypted",
+    "sender": username,
+    "iv": base64.b64encode(iv).decode(),
+    "text": base64.b64encode(ciphertext).decode()
+}
+clientSocket.send(json.dumps(encrypted_msg).encode())
+```
+
+---
+
+## 4. Summary Table
+
+| Area                | Current State         | What to Fix/Complete                                  |
+|---------------------|----------------------|-------------------------------------------------------|
+| Crypto functions    | Placeholders         | Use real cryptography library and functions           |
+| Key exchange        | Not implemented      | Add RSA key exchange and session key transmission     |
+| Message encryption  | Not implemented      | Use AES (or Fernet) for message encryption            |
+| Key storage         | Not implemented      | Store session keys per client                         |
+| User prompts        | Manual key entry     | Automate key exchange, do not prompt for keys         |
+
+---
+
+## 5. Next Steps
+
+1. Replace all placeholder cryptography calls with real implementations as shown above.
+2. Implement the key exchange at connection setup.
+3. Use the session key for all encrypted message types.
+4. Remove any user prompts for keys—this should be handled automatically.
+
+If you need a more detailed, step-by-step code sample for any part, let me know!
+
+User: I have attempted to apply these fixes usinghte provided examples as a guide.  Analyze the codebase and diagnose how much of the code is correct.  If not, explain how to fix/complete any incorrect/incomplete code (preserve all comment annotation for any fixes/examples you may provide)
+
+GitHub Copilot: You have made progress by importing the correct cryptography modules and including some relevant code structure. However, your implementation is still incomplete and contains several critical issues. Here’s a detailed analysis and step-by-step guidance to fix and complete your encryption/decryption logic.
+
+---
+
+## 1. What’s Correct
+
+- **Imports**: You are now importing the correct cryptography modules for RSA and AES.
+- **Message Format**: The `"type": "encrypted"` field is present and handled in both client and server.
+- **General Structure**: The code structure for sending and receiving messages is sound.
+
+---
+
+## 2. What’s Incorrect or Incomplete
+
+### a. Cryptography Usage
+
+- **No Key Exchange**: There is no code to receive the server’s public key, generate an AES session key, encrypt it with the server’s public key, and send it to the server.
+- **No Session Key Storage**: The AES key is generated per message, not per session, and is not shared with the server.
+- **No Real Encryption/Decryption**: You are calling `cryptography.generate_key()` and `cryptography.encrypt()`, which do not exist. You must use the correct cryptography API for key generation and encryption.
+- **Manual Key Entry**: The client prompts the user to enter an RSA key to decrypt messages, which is not how secure messaging works.
+
+### b. Protocol/Integration
+
+- **No Handling of Encrypted Session Key**: The server does not receive or store a session key for each client.
+- **No IV Handling**: AES encryption requires an IV (initialization vector), which must be generated and sent with each message.
+- **No Automated Decryption**: The client should automatically decrypt messages using the session key, not prompt the user.
+
+---
+
+## 3. How to Fix/Complete the Code
+
+### a. Key Exchange Protocol
+
+**On connection:**
+1. **Server** sends its public key to the client.
+2. **Client** generates a random AES session key, encrypts it with the server’s public key, and sends it to the server.
+3. **Both** store the session key for the duration of the session.
+
+### b. Message Encryption/Decryption
+
+- **Encrypt**: Use the session key and a random IV to encrypt messages with AES (e.g., AES-CFB or AES-GCM).
+- **Send**: Include the IV and ciphertext in the message.
+- **Decrypt**: Use the session key and IV to decrypt incoming messages.
+
+### c. Example Fixes (with Comments)
+
+#### Client (ClassChatClient.py) — Key Exchange and Encryption
+
+**Add these variables at the top (after imports):**
+```python
+server_public_key = None
+session_key = None
+```
+
+**After sending the username, receive the server’s public key:**
+```python
+# Receive server's public key
+while True:
+    message = clientSocket.recv(4096)
+    incoming_message = json.loads(message.decode())
+    if incoming_message.get("text") == "SERVER_PUBLIC_KEY":
+        server_public_key = serialization.load_pem_public_key(incoming_message.get("key").encode())
+        break
+```
+
+**Generate and send the AES session key:**
+```python
+# Generate AES session key
+session_key = os.urandom(32)  # 256-bit key
+encrypted_session_key = server_public_key.encrypt(
+    session_key,
+    padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
+)
+clientSocket.send(json.dumps({"type": "session_key", "key": base64.b64encode(encrypted_session_key).decode()}).encode())
+```
+
+**When sending an encrypted message:**
+```python
+elif type.lower() == "encrypted":
+    plaintext = input('Encrypted Message: ').strip()
+    if not plaintext:
+        continue
+    iv = os.urandom(16)
+    cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
+    encryptor = cipher.encryptor()
+    ciphertext = encryptor.update(plaintext.encode()) + encryptor.finalize()
+    encrypted_msg = {
+        "type": "encrypted",
+        "sender": username,
+        "iv": base64.b64encode(iv).decode(),
+        "text": base64.b64encode(ciphertext).decode()
+    }
+    clientSocket.send(json.dumps(encrypted_msg).encode())
+    continue
+```
+
+**When receiving an encrypted message:**
+```python
+elif incoming_message.get("type") == "encrypted":
+    sender = incoming_message.get("sender")
+    encrypted_text = base64.b64decode(incoming_message.get("text"))
+    iv = base64.b64decode(incoming_message.get("iv"))
+    cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
+    decryptor = cipher.decryptor()
+    decrypted_text = decryptor.update(encrypted_text) + decryptor.finalize()
+    print(f"\n[Decrypted Message] {sender}: {decrypted_text.decode()}")
+```
+
+**Remove any prompt for manual key entry.**
+
+---
+
+#### Server (ClassChatServer.py) — Key Exchange and Decryption
+
+- **Store a session key for each client after receiving the encrypted session key.**
+- **Use the session key to decrypt incoming encrypted messages.**
+- **Send the public key to the client after username is received.**
+
+---
+
+## 4. Summary Table
+
+| Area                | Current State         | What to Fix/Complete                                  |
+|---------------------|----------------------|-------------------------------------------------------|
+| Crypto functions    | Placeholders         | Use real cryptography API for key generation, encryption, decryption |
+| Key exchange        | Not implemented      | Add RSA key exchange and session key transmission     |
+| Message encryption  | Not implemented      | Use AES for message encryption                        |
+| Key storage         | Not implemented      | Store session key per client                          |
+| User prompts        | Manual key entry     | Automate key exchange and decryption                  |
+
+---
+
+## 5. Next Steps
+
+1. Implement the key exchange as described above.
+2. Use the session key for all encrypted message types.
+3. Remove any user prompts for keys—this should be handled automatically.
+4. Update the server to store and use the session key for each client.
+
+If you need a more detailed, step-by-step code sample for the server or further clarification, let me know!
+
+User: I have attempted to apply these fixes usinghte provided examples as a guide.  Explain how to fix/complete any incorrect/incomplete code (preserve all comment annotation for any fixes/examples you may provide)
+
+GitHub Copilot: You are very close to a working encrypted chat, but your server code is missing the critical logic for handling the session key exchange and for decrypting incoming encrypted messages. Here’s what you need to fix and complete, with clear steps and code snippets (preserving your comment style):
+
+---
+
+## 1. **Store Session Keys Per Client**
+
+Add a dictionary at the top of your server file to keep track of each client’s session key:
+
+```python
+client_session_keys = {}  # Maps username to their AES session key
+```
+
+---
+
+## 2. **Send Public Key to Client**
+
+You are already sending the public key after receiving the username, which is correct.
+
+---
+
+## 3. **Handle Session Key Exchange**
+
+Inside `handle_client`, after the username is received and before entering the main message loop, you need to receive and decrypt the session key from the client:
+
+```python
+# After sending welcome/info messages, before the main while loop:
+# Receive the encrypted session key from the client
+message = connectionSocket.recv(4096)
+message_parse = json.loads(message.decode())
+if message_parse.get("type") == "session_key":
+    encrypted_session_key = base64.b64decode(message_parse.get("key"))
+    session_key = private_key.decrypt(
+        encrypted_session_key,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    client_session_keys[username] = session_key
+else:
+    # Handle error: session key not received
+    connectionSocket.send(json.dumps({"status": "error", "text": "Session key not received."}).encode())
+    return
+```
+
+---
+
+## 4. **Decrypt Incoming Encrypted Messages**
+
+In your main message loop, add logic for `"type": "encrypted"`:
+
+```python
+elif message_parse.get("type") == "encrypted":
+    # Decrypt the message using the stored session key
+    session_key = client_session_keys.get(username)
+    if not session_key:
+        connectionSocket.send(json.dumps({"status": "error", "text": "No session key found for user."}).encode())
+        continue
+    iv = base64.b64decode(message_parse.get("iv"))
+    ciphertext = base64.b64decode(message_parse.get("text"))
+    cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
+    decryptor = cipher.decryptor()
+    plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+    # Now you can handle the plaintext as a normal message, e.g. print or broadcast
+    print(f"[Decrypted Message from {username}]: {plaintext.decode()}")
+    # Optionally, broadcast the decrypted message to other users (encrypted or plaintext as needed)
+    # Example: broadcast_message(json.dumps({"type": "group_message", "sender": username, "text": plaintext.decode()}), connectionSocket)
+    continue
+```
+
+---
+
+## 5. **Remove Old Placeholder Functions**
+
+Remove or update these functions, as they are not used and are misleading:
+
+```python
+def encrypt_message(message: str) -> str:
+    # Remove this function, encryption is handled per message with session key
+    pass
+
+def decrypt_message(encrypted_message: str, RSA_Key: str) -> str:
+    # Remove this function, decryption is handled per message with session key
+    pass
+```
+
+---
+
+## 6. **Summary Table**
+
+| Area                | Current State         | What to Fix/Complete                                  |
+|---------------------|----------------------|-------------------------------------------------------|
+| Session key storage | Not implemented      | Add `client_session_keys` dict                        |
+| Key exchange        | Not handled          | Receive, decrypt, and store session key per client    |
+| Message decryption  | Not handled          | Decrypt `"encrypted"` messages using session key      |
+| Old crypto funcs    | Placeholder          | Remove or update as above                             |
+
+---
+
+## 7. **Example: Main Additions**
+
+**At the top:**
+```python
+client_session_keys = {}  # Maps username to their AES session key
+```
+
+**After username is received:**
+```python
+# Receive the encrypted session key from the client
+message = connectionSocket.recv(4096)
+message_parse = json.loads(message.decode())
+if message_parse.get("type") == "session_key":
+    encrypted_session_key = base64.b64decode(message_parse.get("key"))
+    session_key = private_key.decrypt(
+        encrypted_session_key,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    client_session_keys[username] = session_key
+else:
+    connectionSocket.send(json.dumps({"status": "error", "text": "Session key not received."}).encode())
+    return
+```
+
+**In the message loop:**
+```python
+elif message_parse.get("type") == "encrypted":
+    session_key = client_session_keys.get(username)
+    if not session_key:
+        connectionSocket.send(json.dumps({"status": "error", "text": "No session key found for user."}).encode())
+        continue
+    iv = base64.b64decode(message_parse.get("iv"))
+    ciphertext = base64.b64decode(message_parse.get("text"))
+    cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
+    decryptor = cipher.decryptor()
+    plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+    print(f"[Decrypted Message from {username}]: {plaintext.decode()}")
+    continue
+```
+
+---
+
+**With these changes, your server will correctly handle encrypted communication with each client.**  
+If you want to forward encrypted messages to other users, you’ll need to re-encrypt them with the recipient’s session key and IV, or send the plaintext and let each client encrypt as needed.
+
+Let me know if you need a full code example or further clarification!
+
+User: I have attempted to apply these fixes usinghte provided examples as a guide.  Explain how to fix/complete any incorrect/incomplete code (preserve all comment annotation for any fixes/examples you may provide)
+
+GitHub Copilot: Your server now correctly receives and stores the session key for each client and can decrypt incoming `"encrypted"` messages. However, there are a few important points and potential improvements to make your encryption/decryption feature robust and complete:
+
+---
+
+## 1. **Broadcasting/Forwarding Encrypted Messages**
+
+**Current State:**  
+- The server decrypts incoming encrypted messages and prints them, but does not forward them to other clients (either as plaintext or re-encrypted).
+
+**How to Fix/Complete:**  
+- Decide on your security model:
+  - **Option A:** Forward the decrypted plaintext to other clients, letting each client encrypt as needed (simpler, but less secure for group/private messages).
+  - **Option B:** Re-encrypt the message for each recipient using their session key (more secure, but requires the server to know all session keys).
+
+**Example for Option B (re-encrypt for each recipient):**
+```python
+# Example: Forward decrypted message as encrypted to all other clients
+for recipient, sock in client_dictionary.items():
+    if recipient != username and recipient in client_session_keys:
+        recipient_key = client_session_keys[recipient]
+        new_iv = os.urandom(16)
+        cipher = Cipher(algorithms.AES(recipient_key), modes.CFB(new_iv))
+        encryptor = cipher.encryptor()
+        new_ciphertext = encryptor.update(plaintext) + encryptor.finalize()
+        encrypted_msg = {
+            "type": "encrypted",
+            "sender": username,
+            "iv": base64.b64encode(new_iv).decode(),
+            "text": base64.b64encode(new_ciphertext).decode()
+        }
+        sock.send(json.dumps(encrypted_msg).encode())
+```
+- **Preserve your comment annotation**:  
+  ```python
+  # Optionally, broadcast the decrypted message to other users (encrypted or plaintext as needed)
+  ```
+
+---
+
+## 2. **Error Handling and Security**
+
+- **Check for missing session keys**: Already handled with an error message.
+- **Handle exceptions in decryption**: Wrap decryption in a try/except to avoid server crashes on bad data.
+
+**Example:**
+```python
+try:
+    iv = base64.b64decode(message_parse.get("iv"))
+    ciphertext = base64.b64decode(message_parse.get("text"))
+    cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
+    decryptor = cipher.decryptor()
+    plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+except Exception as e:
+    print(f"[Error] Failed to decrypt message from {username}: {e}")
+    continue
+```
+
+---
+
+## 3. **Sending the Server Public Key**
+
+- **Current State:**  
+  The server generates the public key but does not send it to the client after receiving the username.
+
+- **How to Fix:**  
+  After receiving the username, send the public key to the client:
+  ```python
+  connectionSocket.send(json.dumps({
+      "text": "SERVER_PUBLIC_KEY",
+      "key": public_pem.decode()
+  }).encode())
+  ```
+
+---
+
+## 4. **Remove Unused/Old Crypto Functions**
+
+- You have already removed the old placeholder `encrypt_message` and `decrypt_message` functions, which is correct.
+
+---
+
+## 5. **Summary Table**
+
+| Area                | Current State         | What to Fix/Complete                                  |
+|---------------------|----------------------|-------------------------------------------------------|
+| Forwarding messages | Not implemented      | Forward decrypted messages to other clients, re-encrypt as needed |
+| Error handling      | Partial              | Add try/except for decryption                         |
+| Public key send     | Not implemented      | Send public key to client after username received     |
+| Old crypto funcs    | Removed              | Good, nothing to do                                   |
+
+---
+
+## 6. **Example: Main Additions**
+
+**After receiving the username:**
+```python
+# Send the server's public key to the client
+connectionSocket.send(json.dumps({
+    "text": "SERVER_PUBLIC_KEY",
+    "key": public_pem.decode()
+}).encode())
+```
+
+**In the `"encrypted"` message handler:**
+```python
+elif message_parse.get("type") == "encrypted":
+    session_key = client_session_keys.get(username)
+    if not session_key:
+        connectionSocket.send(json.dumps({"status": "error", "text": "No session key found for user."}).encode())
+        continue
+    try:
+        iv = base64.b64decode(message_parse.get("iv"))
+        ciphertext = base64.b64decode(message_parse.get("text"))
+        cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
+        decryptor = cipher.decryptor()
+        plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+        print(f"[Decrypted Message from {username}]: {plaintext.decode()}")
+        # Optionally, broadcast the decrypted message to other users (encrypted or plaintext as needed)
+        # Example: re-encrypt for each recipient
+        for recipient, sock in client_dictionary.items():
+            if recipient != username and recipient in client_session_keys:
+                recipient_key = client_session_keys[recipient]
+                new_iv = os.urandom(16)
+                cipher = Cipher(algorithms.AES(recipient_key), modes.CFB(new_iv))
+                encryptor = cipher.encryptor()
+                new_ciphertext = encryptor.update(plaintext) + encryptor.finalize()
+                encrypted_msg = {
+                    "type": "encrypted",
+                    "sender": username,
+                    "iv": base64.b64encode(new_iv).decode(),
+                    "text": base64.b64encode(new_ciphertext).decode()
+                }
+                sock.send(json.dumps(encrypted_msg).encode())
+        continue
+    except Exception as e:
+        print(f"[Error] Failed to decrypt message from {username}: {e}")
+        continue
+```
+
+---
+
+**With these changes, your server will be able to:**
+- Send its public key to clients.
+- Receive and store session keys.
+- Decrypt incoming encrypted messages.
+- Forward messages to other clients, re-encrypting as needed.
+
+Let me know if you want a full code block or further clarification!
+
+User: I have attempted to apply these fixes usinghte provided examples as a guide.  Have I done so correctly? Explain how to fix/complete any incorrect/incomplete code (preserve all comment annotation for any fixes/examples you may provide)
+
+GitHub Copilot: You have made significant progress and are very close to a correct implementation of encrypted messaging between client and server. Here’s a detailed review and what remains to be fixed or completed:
+
+---
+
+## 1. **Key Exchange and Session Key Handling**
+
+- **Correct:**  
+  - The server generates an RSA key pair and sends the public key to the client.
+  - The client generates a random AES session key, encrypts it with the server’s public key, and sends it to the server.
+  - The server receives and decrypts the session key and stores it per client.
+
+---
+
+## 2. **Encrypted Message Handling**
+
+- **Correct:**  
+  - The client encrypts messages using the session key and a random IV, and sends both (base64-encoded) to the server.
+  - The server decrypts incoming encrypted messages using the stored session key and IV.
+
+---
+
+## 3. **What’s Missing or Needs Fixing**
+
+### a. **Order of Public Key Exchange**
+
+- **Issue:**  
+  The server sends the public key *after* receiving the session key. This is backwards: the client needs the public key *before* it can send the session key.
+
+- **How to Fix:**  
+  After receiving the username, the server should immediately send the public key to the client, then wait for the session key.
+
+  **Example (preserve your comments):**
+  ```python
+  # After receiving the username:
+  connectionSocket.send(json.dumps({
+      "text": "SERVER_PUBLIC_KEY",
+      "key": public_pem.decode()
+  }).encode())
+  # Then receive the session key from the client
+  message = connectionSocket.recv(4096)
+  message_parse = json.loads(message.decode())
+  if message_parse.get("type") == "session_key":
+      # ... (rest of your code)
+  ```
+
+### b. **Client: Sending Encrypted Messages**
+
+- **Issue:**  
+  In your client, the `"encrypted"` message type handler is missing! You only have code for *receiving* encrypted messages, not for *sending* them.
+
+- **How to Fix:**  
+  Add this block to your main client loop (preserve your comments):
+
+  ```python
+  elif type.lower() == "encrypted":
+      plaintext = input('Encrypted Message: ').strip()
+      if not plaintext:
+          continue
+      iv = os.urandom(16)
+      cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
+      encryptor = cipher.encryptor()
+      ciphertext = encryptor.update(plaintext.encode()) + encryptor.finalize()
+      encrypted_msg = {
+          "type": "encrypted",
+          "sender": username,
+          "iv": base64.b64encode(iv).decode(),
+          "text": base64.b64encode(ciphertext).decode()
+      }
+      clientSocket.send(json.dumps(encrypted_msg).encode())
+      continue
+  ```
+
+### c. **Client: Receiving Encrypted Messages**
+
+- **Correct:**  
+  Your code for receiving and decrypting encrypted messages is correct.
+
+---
+
+## 4. **Optional: Forwarding Encrypted Messages to Other Clients**
+
+- **Server:**  
+  If you want to support group or broadcast encrypted messages, the server should re-encrypt the plaintext for each recipient using their session key and IV, and send it as a new `"encrypted"` message.
+
+---
+
+## 5. **Summary Table**
+
+| Area                | Status      | What to Fix/Complete                                  |
+|---------------------|-------------|-------------------------------------------------------|
+| Public key exchange | Out of order| Send public key to client before expecting session key|
+| Client encryption   | Missing     | Add code to encrypt and send messages                 |
+| Client decryption   | Correct     | No change needed                                      |
+| Server decryption   | Correct     | No change needed                                      |
+| Forwarding          | Optional    | Re-encrypt for each recipient if needed               |
+
+---
+
+## 6. **Final Notes**
+
+- **Preserve all your comment annotation** as you add/fix code.
+- **Test**: After these changes, test sending and receiving encrypted messages in both directions.
+
+---
+
+If you want a full code block for any section, let me know!
+
+User: I have attempted to apply these fixes usinghte provided examples as a guide.  Have I done so correctly? Explain how to fix/complete any incorrect/incomplete code (preserve all comment annotation for any fixes/examples you may provide)
+
+GitHub Copilot: You have implemented most of the encryption/decryption protocol correctly, but there is a **critical ordering issue** in your server’s key exchange, and a minor improvement you should make for robustness. Here’s a detailed review and what to fix:
+
+---
+
+## 1. **Key Exchange Order (Critical Fix Needed)**
+
+### **Current (Incorrect) Order:**
+- The server receives the session key from the client **before** sending the public key.
+- The client waits for the public key before sending the session key.
+
+### **Result:**  
+This will cause a deadlock:  
+- The client waits for the public key, but the server waits for the session key.
+
+### **How to Fix (Preserve Comments):**
+**After receiving the username, the server should immediately send the public key to the client, then wait for the session key.**
+
+**Example:**
+```python
+# After receiving the username:
+connectionSocket.send(json.dumps({
+    "text": "SERVER_PUBLIC_KEY",
+    "key": public_pem.decode()
+}).encode())
+
+# Now receive the encrypted session key from the client
+message = connectionSocket.recv(4096)
+message_parse = json.loads(message.decode())
+if message_parse.get("type") == "session_key":
+    encrypted_session_key = base64.b64decode(message_parse.get("key"))
+    session_key = private_key.decrypt(
+        encrypted_session_key,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    client_session_keys[username] = session_key
+else:
+    # Handle error: session key not received
+    connectionSocket.send(json.dumps({"status": "error", "text": "Session key not received."}).encode())
+    return
+```
+**Move the public key send block above the session key receive block.**
+
+---
+
+## 2. **Client-Side: Correct**
+
+- The client waits for the public key, then generates and sends the session key.  
+- The client can send and receive encrypted messages using the session key and IV.  
+- The `"encrypted"` message handler is present and correct.
+
+---
+
+## 3. **Server-Side: Decryption and Error Handling**
+
+- The server correctly decrypts incoming encrypted messages using the session key and IV.
+- You should wrap the decryption in a try/except to avoid server crashes on bad data.
+
+**Example:**
+```python
+try:
+    iv = base64.b64decode(message_parse.get("iv"))
+    ciphertext = base64.b64decode(message_parse.get("text"))
+    cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
+    decryptor = cipher.decryptor()
+    plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+    print(f"[Decrypted Message from {username}]: {plaintext.decode()}")
+    # Optionally, broadcast or handle the plaintext as needed
+except Exception as e:
+    print(f"[Error] Failed to decrypt message from {username}: {e}")
+    continue
+```
+
+---
+
+## 4. **Optional: Forwarding Encrypted Messages**
+
+If you want to forward encrypted messages to other clients, you should re-encrypt the plaintext for each recipient using their session key and a new IV.
+
+---
+
+## 5. **Summary Table**
+
+| Area                | Status      | What to Fix/Complete                                  |
+|---------------------|-------------|-------------------------------------------------------|
+| Key exchange order  | Incorrect   | **Send public key to client before receiving session key** |
+| Client encryption   | Correct     | No change needed                                      |
+| Client decryption   | Correct     | No change needed                                      |
+| Server decryption   | Correct     | Add try/except for robustness                         |
+| Forwarding          | Optional    | Re-encrypt for each recipient if needed               |
+
+---
+
+## 6. **Final Notes**
+
+- **Main fix:** Move the server’s public key send block above the session key receive block.
+- **Test:** After this change, your client and server should establish a secure session and exchange encrypted messages successfully.
+
+If you want a full code block for the corrected server function, let me know!
+
+User: I have attempted to apply these fixes usinghte provided examples as a guide.  Have I done so correctly? If not, provide a full code block so I understand exactly how to correct this server function problem (Keep all current comment documentation/annotation, and add more for explaining/clarity purposes)
+
+GitHub Copilot: You have almost everything correct, but the **order of the key exchange** in your server’s `handle_client` function was previously incorrect. In your latest code, you have now fixed this: the server sends the public key to the client **before** waiting for the session key, which is correct.
+
+Below is a **fully corrected and annotated version** of your `handle_client` function, with all necessary comments and additional clarifications for each step. This version ensures robust, secure, and clear key exchange and encrypted message handling.
+
+---
+
+```python
+def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
+    username = "<unknown>"  # Initialize before try to avoid unbound variable
+
+    try:
+        # Step 1: Receive the username from the client
+        username = connectionSocket.recv(1024).decode().strip() # Expecting the first message to be the username
+        print(f"Received from client {addr}: {username}") # Log the username received from the client
+        with clients_lock:
+            client_dictionary[username] = connectionSocket # Add the client and their username to the dictionary
+            clients.append(connectionSocket) # Add the client to the list of connected clients
+
+        # Step 2: Send the server's public key to the client for secure key exchange
+        connectionSocket.send(json.dumps({
+            "text": "SERVER_PUBLIC_KEY",
+            "key": public_pem.decode()
+        }).encode())
+
+        # Step 3: Receive the encrypted session key from the client
+        message = connectionSocket.recv(4096)
+        message_parse = json.loads(message.decode())
+        if message_parse.get("type") == "session_key":
+            encrypted_session_key = base64.b64decode(message_parse.get("key"))
+            # Decrypt the session key using the server's private RSA key
+            session_key = private_key.decrypt(
+                encrypted_session_key,
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None
+                )
+            )
+            client_session_keys[username] = session_key # Store the session key for this client
+            print(f"[Key Exchange] Session key established for {username}")
+        else:
+            # Handle error: session key not received
+            connectionSocket.send(json.dumps({"status": "error", "text": "Session key not received."}).encode())
+            return
+
+        # Step 4: Deliver any offline messages to the client
+        if username in offline_messages:
+            for msg in offline_messages[username]:
+                try:
+                    connectionSocket.send(json.dumps(msg).encode())
+                except Exception:
+                    pass
+            del offline_messages[username]
+
+        # Step 5: Notify other clients about the new user (as info JSON)
+        broadcast_message(json.dumps({"status": "info", "text": f"{username} has joined the chat."}), connectionSocket)
+        # Send a welcome message to the new client (as info JSON)
+        connectionSocket.send(json.dumps({"status": "info", "text": f"Welcome to ClassChat, {username}!"}).encode())
+        connectionSocket.send(json.dumps({"status": "ACK", "message": "Connection Established."}).encode()) # Send acknowledgment to the client that the connection is established
+        connectionSocket.send(json.dumps({"status": "info", "text": "To message a specific user, type '@username message'. To message all users, just type your message."}).encode())
+        connectionSocket.send(json.dumps({"status": "info", "text": "Type 'exit' to disconnect from the server."}).encode())
+
+        # Step 6: Main message loop - handle all incoming messages from this client
+        while True: # Continuously listen for messages from the client
+            message = connectionSocket.recv(1024) # Receive a message from the client
+            if not message:
+                break # If the client has disconnected, exit the loop
+            message_parse = json.loads(message.decode()) # Attempt to parse the message as JSON
+
+            # Handle group commands, group messages, file transfers, etc. (existing logic)
+            if message_parse.get("type") == "group_command":
+                # ... (existing group command handling code)
+                continue
+            elif message_parse.get("type") == "group_message":
+                # ... (existing group message handling code)
+                continue
+            elif message_parse.get("type") == "file_transfer":
+                # ... (existing file transfer handling code)
+                continue
+            elif message_parse.get("type") == "private_message":
+                # ... (existing private message handling code)
+                continue
+            elif message_parse.get("type") == "broadcast":
+                # ... (existing broadcast handling code)
+                continue
+            elif message_parse.get("type") == "offline_message":
+                # ... (existing offline message handling code)
+                continue
+
+            # Step 7: Handle encrypted messages
+            elif message_parse.get("type") == "encrypted":
+                session_key = client_session_keys.get(username)
+                if not session_key:
+                    connectionSocket.send(json.dumps({"status": "error", "text": "No session key found for user."}).encode())
+                    continue
+                try:
+                    iv = base64.b64decode(message_parse.get("iv"))
+                    ciphertext = base64.b64decode(message_parse.get("text"))
+                    cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
+                    decryptor = cipher.decryptor()
+                    plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+                    print(f"[Decrypted Message from {username}]: {plaintext.decode()}")
+                    # Optionally, broadcast or handle the plaintext as needed
+                except Exception as e:
+                    print(f"[Error] Failed to decrypt message from {username}: {e}")
+                    continue
+
+            else:
+                # If not intended for a specific person, broadcast message to all active users
+                broadcast_message(message.decode(), connectionSocket)
+
+    except Exception as e:
+        print(f"An error occurred while handling client {addr}: {e}") # Log any exceptions that occur while handling the client
+
+    finally:
+        # Step 8: Cleanup on disconnect
+        with clients_lock:
+            if connectionSocket in clients:
+                clients.remove(connectionSocket)
+            if username in client_dictionary:
+                del client_dictionary[username]
+            else:
+                print(f"Warning: Username '{username}' not found in client dictionary during cleanup.")
+                offline_messages.pop(username, None) # Add offline users to offline messages
+        # Remove user from all groups
+        for group in groups.values():
+            group.discard(username)
+        broadcast_message(json.dumps({"status": "info", "text": f"{username}@{addr} has left the chat."}), connectionSocket)
+        print(f"Connection with client {addr} closed.")
+        connectionSocket.close()
+```
+
+---
+
+### **Key Points:**
+- **Public key is sent to the client immediately after username is received.**
+- **Session key is received and decrypted before any further communication.**
+- **All comment documentation is preserved and expanded for clarity.**
+- **Robust error handling is included for decryption and key exchange.**
+- **All other message types are handled as before.**
+
+---
+
+**With this structure, your server will correctly and securely handle encrypted communication with clients.**  
+If you need a full file with all group/file/broadcast logic included, let me know!
+
+User: I have attempted to apply these fixes usinghte provided examples as a guide.  Analyze the codebase and diagnose how much of the code is correct.  If not, explain how to fix/complete any incorrect/incomplete code (preserve all comment annotation for any fixes/examples you may provide)
+
+GitHub Copilot: **Analysis:**  
+You have now implemented the key exchange and encrypted message handling in the correct order. Here’s a breakdown of what’s correct and what could be improved or clarified:
+
+---
+
+## What’s Correct
+
+- **Key Exchange Order:**  
+  - The server receives the username, then sends the public key, then receives the encrypted session key.  
+  - The client waits for the public key before sending the session key.  
+  - This is the correct and secure order.
+
+- **Session Key Storage:**  
+  - The server stores the session key per client in `client_session_keys`.
+
+- **Encrypted Message Handling:**  
+  - The client encrypts messages with AES and a random IV, sends both to the server.
+  - The server decrypts incoming encrypted messages using the stored session key and IV.
+  - Error handling is present for missing session keys and decryption errors.
+
+- **Comment Documentation:**  
+  - Your comments are clear and explain each step.
+
+---
+
+## What’s Incomplete or Could Be Improved
+
+### 1. **Encrypted Message Forwarding (Optional, for Group/Broadcast)**
+- **Current:**  
+  The server decrypts and prints the message, but does not forward it to other clients.
+- **If you want end-to-end encrypted group/broadcast:**  
+  The server should re-encrypt the plaintext for each recipient using their session key and a new IV, and send as a new `"encrypted"` message.
+
+**Example (preserve comments):**
+```python
+# Optionally, broadcast the decrypted message to other users (encrypted for each recipient)
+for recipient, sock in client_dictionary.items():
+    if recipient != username and recipient in client_session_keys:
+        recipient_key = client_session_keys[recipient]
+        new_iv = os.urandom(16)
+        cipher = Cipher(algorithms.AES(recipient_key), modes.CFB(new_iv))
+        encryptor = cipher.encryptor()
+        new_ciphertext = encryptor.update(plaintext) + encryptor.finalize()
+        encrypted_msg = {
+            "type": "encrypted",
+            "sender": username,
+            "iv": base64.b64encode(new_iv).decode(),
+            "text": base64.b64encode(new_ciphertext).decode()
+        }
+        sock.send(json.dumps(encrypted_msg).encode())
+```
+- **Add this after printing the decrypted message, if you want to forward encrypted messages.**
+
+---
+
+### 2. **Robustness: Exception Handling**
+- **You already have try/except for decryption.**  
+  Consider logging or handling exceptions for all socket operations to avoid server crashes on network errors.
+
+---
+
+### 3. **Security Note**
+- **Current design is secure for one-to-one communication.**  
+  For group messages, true end-to-end encryption is more complex (requires group key management). Your current approach (re-encrypting for each recipient) is a good practical solution for this project.
+
+---
+
+## Summary Table
+
+| Area                | Status      | What to Fix/Complete                                  |
+|---------------------|-------------|-------------------------------------------------------|
+| Key exchange order  | Correct     | No change needed                                      |
+| Session key storage | Correct     | No change needed                                      |
+| Encrypted message   | Correct     | No change needed                                      |
+| Forwarding          | Optional    | Add re-encryption for group/broadcast if desired      |
+| Exception handling  | Good        | Consider more logging for socket errors               |
+
+---
+
+## Conclusion
+
+**You have implemented the core encryption/decryption protocol correctly.**  
+- If you want to support encrypted group/broadcast, add the re-encryption forwarding logic as shown above.
+- Otherwise, your code is correct and secure for one-to-one encrypted messaging.
+
+If you want a full code block for encrypted message forwarding, let me know!
+
+User: Is this "Encrypted message forwarding" client-side or server-side? This explaination is unclear
+
+GitHub Copilot: Great question! **Encrypted message forwarding** is a **server-side** responsibility.
+
+### What it means:
+- When a client sends an encrypted message to the server, the server decrypts it (using the session key for that client).
+- If the message is meant for other users (e.g., a group or broadcast message), the server **re-encrypts** the plaintext for each recipient using their own session key and a new IV, and then sends it to each recipient as a new `"encrypted"` message.
+
+### Why server-side?
+- Only the server knows all the session keys for all connected clients.
+- The client only knows its own session key (shared with the server), not the keys of other clients.
+- The server must decrypt, then re-encrypt for each recipient, to ensure each recipient can decrypt the message with their own session key.
+
+### Client-side:
+- The client only encrypts messages it sends to the server, and decrypts messages it receives from the server.
+
+---
+
+**Summary:**  
+- **Encrypted message forwarding is implemented on the server.**
+- The client only handles encryption/decryption for its own messages.
+
+If you want a code example for server-side encrypted forwarding, let me know!
+
+User: I have attempted to apply these fixes usinghte provided examples as a guide.  Analyze the codebase and diagnose how much of the code is correct.  If not, explain how to fix/complete any incorrect/incomplete code (preserve all comment annotation for any fixes/examples you may provide)
+
+GitHub Copilot: Your codebase now implements the **core encryption/decryption protocol correctly** for secure client-server communication. Here’s a detailed analysis of what’s correct, what’s missing, and what you might want to improve:
+
+---
+
+## What’s Correct
+
+- **Key Exchange Order:**  
+  - The server sends its public key to the client after receiving the username.
+  - The client waits for the public key, then generates and sends the encrypted session key.
+  - The server receives and decrypts the session key, storing it per client.
+
+- **Session Key Storage:**  
+  - The server uses a `client_session_keys` dictionary to store each client’s session key.
+
+- **Encrypted Message Handling:**  
+  - The client encrypts messages with AES and a random IV, sends both to the server.
+  - The server decrypts incoming encrypted messages using the correct session key and IV.
+  - The client can also decrypt incoming encrypted messages.
+
+- **Comment Documentation:**  
+  - Your comments are clear and explain each step.
+
+---
+
+## What’s Incomplete or Could Be Improved
+
+### 1. **Encrypted Message Forwarding (for group/broadcast/private)**
+- **Current:**  
+  The server decrypts and prints the message, but does not forward it to other clients as encrypted messages.
+- **If you want end-to-end encrypted group/broadcast/private:**  
+  The server should re-encrypt the plaintext for each recipient using their session key and a new IV, and send as a new `"encrypted"` message.
+
+**Example (preserve comments):**
+```python
+# Optionally, broadcast the decrypted message to other users (encrypted for each recipient)
+for recipient, sock in client_dictionary.items():
+    if recipient != username and recipient in client_session_keys:
+        recipient_key = client_session_keys[recipient]
+        new_iv = os.urandom(16)
+        cipher = Cipher(algorithms.AES(recipient_key), modes.CFB(new_iv))
+        encryptor = cipher.encryptor()
+        new_ciphertext = encryptor.update(plaintext) + encryptor.finalize()
+        encrypted_msg = {
+            "type": "encrypted",
+            "sender": username,
+            "iv": base64.b64encode(new_iv).decode(),
+            "text": base64.b64encode(new_ciphertext).decode()
+        }
+        sock.send(json.dumps(encrypted_msg).encode())
+```
+- **Add this after printing the decrypted message, if you want to forward encrypted messages.**
+
+---
+
+### 2. **Robustness: Exception Handling**
+- **You already have try/except for decryption.**  
+  Consider logging or handling exceptions for all socket operations to avoid server crashes on network errors.
+
+---
+
+### 3. **Security Note**
+- **Current design is secure for one-to-one communication.**  
+  For group messages, true end-to-end encryption is more complex (requires group key management). Your current approach (re-encrypting for each recipient) is a good practical solution for this project.
+
+---
+
+## Summary Table
+
+| Area                | Status      | What to Fix/Complete                                  |
+|---------------------|-------------|-------------------------------------------------------|
+| Key exchange order  | Correct     | No change needed                                      |
+| Session key storage | Correct     | No change needed                                      |
+| Encrypted message   | Correct     | No change needed                                      |
+| Forwarding          | Optional    | Add re-encryption for group/broadcast if desired      |
+| Exception handling  | Good        | Consider more logging for socket errors               |
+
+---
+
+## Conclusion
+
+**You have implemented the core encryption/decryption protocol correctly.**  
+- If you want to support encrypted group/broadcast, add the re-encryption forwarding logic as shown above.
+- Otherwise, your code is correct and secure for one-to-one encrypted messaging.
+
+If you want a full code block for encrypted message forwarding, let me know!
+
+---
+
+# Error Resolutions
