@@ -46,6 +46,12 @@ def receive_messages(sock: socket) -> None:
                         print(f"[System] File '{incoming_filename}' saved successfully.")
                     except Exception as e:
                         print(f"[Error] Failed to save file: {e}")
+                elif save == "exit": # If the user types "exit", close the connection and exit the program
+                    print("[System] Disconnecting from server...")
+                    disconnect_message = json.dumps({"type": "disconnect"})
+                    sock.send(disconnect_message.encode())
+                    sock.close()
+                    sys.exit()
                 else:
                     print("[System] File not saved.")
             elif inc_msg.get("type") == "encrypted":
@@ -124,11 +130,15 @@ while True:
             command = input('Group Command (Create, Join, Leave, List): ').strip() #User/Client Input for group command type
             if command.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
                 print("[System] Disconnecting from server...")
+                disconnect_message = json.dumps({"type": "disconnect"})
+                clientSocket.send(disconnect_message.encode())
                 clientSocket.close()
                 sys.exit()
             group_name = input('Group Name: ').strip() if command.lower() in ["create", "join", "leave"] else ""
             if group_name.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
                 print("[System] Disconnecting from server...")
+                disconnect_message = json.dumps({"type": "disconnect"})
+                clientSocket.send(disconnect_message.encode())
                 clientSocket.close()
                 sys.exit()
             group_cmd = {
@@ -143,11 +153,15 @@ while True:
             group_name = input('Group Name: ').strip()
             if group_name.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
                 print("[System] Disconnecting from server...")
+                disconnect_message = json.dumps({"type": "disconnect"})
+                clientSocket.send(disconnect_message.encode())
                 clientSocket.close()
                 sys.exit()
             group_message = input('Group Message: ').strip() #User/Client Input for group message text
             if group_message.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
                 print("[System] Disconnecting from server...")
+                disconnect_message = json.dumps({"type": "disconnect"})
+                clientSocket.send(disconnect_message.encode())
                 clientSocket.close()
                 sys.exit()
             group_msg = {
@@ -160,6 +174,8 @@ while True:
             continue
         elif group_input.lower() == "exit": #If the user wants to exit now, let them exit
             print("[System] Disconnecting from server...")
+            disconnect_message = json.dumps({"type": "disconnect"})
+            clientSocket.send(disconnect_message.encode())
             clientSocket.close()
             sys.exit()
     elif msg_type.lower() == "file_transfer":
@@ -168,6 +184,8 @@ while True:
             continue
         elif receiver.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
+            disconnect_message = json.dumps({"type": "disconnect"})
+            clientSocket.send(disconnect_message.encode())
             clientSocket.close()
             sys.exit()
         file_name = input('Filename: ').strip() #User/Client Input for filename if message type is file transfer
@@ -175,6 +193,8 @@ while True:
             continue
         elif file_name.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
+            disconnect_message = json.dumps({"type": "disconnect"})
+            clientSocket.send(disconnect_message.encode())
             clientSocket.close()
             sys.exit()
         try:
@@ -185,6 +205,8 @@ while True:
             continue
         if file_data.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
+            disconnect_message = json.dumps({"type": "disconnect"})
+            clientSocket.send(disconnect_message.encode())
             clientSocket.close()
             sys.exit()
         file_msg = {
@@ -202,6 +224,8 @@ while True:
             continue
         elif receiver.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
+            disconnect_message = json.dumps({"type": "disconnect"})
+            clientSocket.send(disconnect_message.encode())
             clientSocket.close()
             sys.exit()
         offline_message = input('Offline Message: ').strip() #User/Client Input for offline message if message type is offline message
@@ -209,6 +233,8 @@ while True:
             continue
         elif offline_message.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
+            disconnect_message = json.dumps({"type": "disconnect"})
+            clientSocket.send(disconnect_message.encode())
             clientSocket.close()
             sys.exit()
         offline_msg = {
@@ -225,6 +251,8 @@ while True:
             continue
         if plaintext.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
+            disconnect_message = json.dumps({"type": "disconnect"})
+            clientSocket.send(disconnect_message.encode())
             clientSocket.close()
             sys.exit()
         iv_val = os.urandom(16)
@@ -245,6 +273,8 @@ while True:
             continue
         elif receiver.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
+            disconnect_message = json.dumps({"type": "disconnect"})
+            clientSocket.send(disconnect_message.encode())
             clientSocket.close()
             sys.exit()
         message_text = input('Message: ').strip() #User/Client Input for message to send
@@ -252,6 +282,8 @@ while True:
             continue
         elif message_text.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
+            disconnect_message = json.dumps({"type": "disconnect"})
+            clientSocket.send(disconnect_message.encode())
             clientSocket.close()
             sys.exit()
         private_msg = {
@@ -268,6 +300,8 @@ while True:
             receiver = "all"
         elif receiver.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
+            disconnect_message = json.dumps({"type": "disconnect"})
+            clientSocket.send(disconnect_message.encode())
             clientSocket.close()
             sys.exit()
         message_text = input('Message: ').strip() #User/Client Input for message to send
@@ -275,6 +309,8 @@ while True:
             continue
         elif message_text.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
+            disconnect_message = json.dumps({"type": "disconnect"})
+            clientSocket.send(disconnect_message.encode())
             clientSocket.close()
             sys.exit()
         msg = {
@@ -287,6 +323,8 @@ while True:
         continue
     elif msg_type.strip().lower() == "exit": # If the user types "exit" at the message type prompt, close the connection and exit the program
         print("[System] Disconnecting from server...")
+        disconnect_message = json.dumps({"type": "disconnect"})
+        clientSocket.send(disconnect_message.encode())
         clientSocket.close()
         sys.exit()
 

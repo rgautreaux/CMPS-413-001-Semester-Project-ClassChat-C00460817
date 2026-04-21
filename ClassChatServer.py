@@ -97,16 +97,18 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
 
         # Step 6: Main message loop - handle all incoming messages from this client
         while True: # Continuously listen for messages from the client
-            message = connectionSocket.recv(1024) # Receive a message from the client
-            if not message:
+            data = connectionSocket.recv(1024) # Receive a message from the client
+            if not data:
+                # Unexpected disconnect
+                print(f"Client {addr} disconnected unexpectedly.")
                 break # If the client has disconnected, exit the loop
-            message_parse = json.loads(message.decode()) # Attempt to parse the message as JSON
+            message = json.loads(data.decode()) # Attempt to parse the message as JSON
 
             # Handle group commands, group messages, file transfers, etc. (existing logic)
-            if message_parse.get("type") == "group_command":
-                command = message_parse.get("command")
-                groupname = message_parse.get("group")
-                sender = message_parse.get("sender")
+            if message.get("type") == "group_command":
+                command = message.get("command")
+                groupname = message.get("group")
+                sender = message.get("sender")
                 if command == "create": # Create and Group Command
                     if groupname not in groups:
                         groups[groupname] = set()
@@ -131,69 +133,69 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                     else:
                         connectionSocket.send(json.dumps({"status": "error", "text": f"You are not in group '{groupname}'."}).encode())
                 continue  # Skip further processing for this message
-            elif message_parse.get("type") == "group_message":
-                groupname = message_parse.get("group").strip()
+            elif message.get("type") == "group_message":
+                groupname = message.get("group").strip()
                 if groupname in groups:
                     try:
-                        sender = message_parse.get("sender")
-                        text = message_parse.get("text")
+                        sender = message.get("sender")
+                        text = message.get("text")
                         handle_group_message(sender, groupname, text)
                     except Exception as e:
                         print(f"An error occurred while handling group message: {e}")
                 else:
                     # If group does not exist, notify sender
-                    send_message_to_user(message_parse.get("sender"), f"Group '{groupname}' does not exist.")
-            elif message_parse.get("type") == "file_transfer":
-                receiver = message_parse.get("receiver", "").strip()
+                    send_message_to_user(message.get("sender"), f"Group '{groupname}' does not exist.")
+            elif message.get("type") == "file_transfer":
+                receiver = message.get("receiver", "").strip()
                 if receiver in client_dictionary:
                     try:
-                        sender = message_parse.get("sender")
-                        filename = message_parse.get("filename")
-                        filedata = message_parse.get("filedata")
+                        sender = message.get("sender")
+                        filename = message.get("filename")
+                        filedata = message.get("filedata")
                         file_transfer(sender, receiver, filename, filedata)
                     except Exception as e:
                         print(f"An error occurred while handling file transfer: {e}")
                         pass
                 else:
                     # If receiver is not online, notify sender and store for offline delivery
-                    send_message_to_user(message_parse.get("sender"), f"User '{receiver}' is not online. File transfer failed.")
-                    offline_messages.setdefault(receiver, []).append(message_parse)
-            elif message_parse.get("type") == "private_message":
-                receiver = message_parse.get("receiver", "").strip()
+                    send_message_to_user(message.get("sender"), f"User '{receiver}' is not online. File transfer failed.")
+                    offline_messages.setdefault(receiver, []).append(message)
+            elif message.get("type") == "private_message":
+                receiver = message.get("receiver", "").strip()
                 if receiver and receiver.lower() != "all":
                     #Direct Message for intended recipient
                     if receiver in client_dictionary:
                         try:
                             # Always send JSON-encoded bytes
-                            client_dictionary[receiver].send(json.dumps(message_parse).encode())
-                            print(f"Received from {username}@{addr}: {message_parse['sender']}: {message_parse['text']}")
+                            client_dictionary[receiver].send(json.dumps(message).encode())
+                            print(f"Received from {username}@{addr}: {message['sender']}: {message['text']}")
                         except Exception:
                             pass
                     else:
                         # If receiver is not online, notify sender and store for offline delivery
-                        send_message_to_user(message_parse.get("sender"), f"User '{receiver}' is not online. Message delivery failed.")
-                        offline_messages.setdefault(receiver, []).append(message_parse)
-            elif message_parse.get("type") == "broadcast":
+                        send_message_to_user(message.get("sender"), f"User '{receiver}' is not online. Message delivery failed.")
+                        offline_messages.setdefault(receiver, []).append(message)
+            elif message.get("type") == "broadcast":
                 broadcast_message(message.decode(), connectionSocket)
                 # Store for offline users
                 for user in offline_messages:
                     if user not in client_dictionary:
-                        offline_messages.setdefault(user, []).append(message_parse)
-            elif message_parse.get("type") == "offline_message":
-                receiver = message_parse.get("receiver", "").strip()
+                        offline_messages.setdefault(user, []).append(message)
+            elif message.get("type") == "offline_message":
+                receiver = message.get("receiver", "").strip()
                 if receiver:
                     if receiver in client_dictionary:
-                        client_dictionary[receiver].send(json.dumps(message_parse).encode())
+                        client_dictionary[receiver].send(json.dumps(message).encode())
                     else:
-                        offline_messages.setdefault(receiver, []).append(message_parse)
-            elif message_parse.get("type") == "encrypted":
+                        offline_messages.setdefault(receiver, []).append(message)
+            elif message.get("type") == "encrypted":
                 session_key = client_session_keys.get(username)
                 if not session_key:
                     connectionSocket.send(json.dumps({"status": "error", "text": "No session key found for user."}).encode())
                     continue
                 try:
-                    iv = base64.b64decode(message_parse.get("iv"))
-                    ciphertext = base64.b64decode(message_parse.get("text"))
+                    iv = base64.b64decode(message.get("iv"))
+                    ciphertext = base64.b64decode(message.get("text"))
                     cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
                     decryptor = cipher.decryptor()
                     plaintext = decryptor.update(ciphertext) + decryptor.finalize()

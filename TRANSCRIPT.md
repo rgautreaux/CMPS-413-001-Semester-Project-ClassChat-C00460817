@@ -6370,3 +6370,39 @@ Made changes.
 
 ---
 
+The codebase does a thorough job of allowing the user/client to type 'exit' to disconnect at nearly every input prompt in the main loop of ClassChatClient.py. Here’s how it works:
+
+- For each major input (message type, group commands, group name, message text, file name, etc.), there is a check for `.strip().lower() == "exit"`, which triggers a disconnect and clean exit.
+- This pattern is repeated for all message types: group, file_transfer, offline_message, encrypted, private, and broadcast.
+- Even at the top-level message type prompt, typing "exit" will disconnect the client.
+
+However, there are a few minor blind spots:
+
+1. **Initial Username Prompt**: When the client first starts, the username is requested. If the user types "exit" here, the client will send "exit" as the username to the server, but will not disconnect. The client will proceed to connect and continue as normal. There is no explicit check for "exit" at this stage.
+
+2. **Prompts Inside receive_messages Thread**: If the user is prompted to save a file (e.g., "Do you want to save 'filename'? (y/n):"), typing "exit" here will not disconnect the client; it will be treated as a "no" or invalid input.
+
+3. **Unexpected Prompts**: If new input prompts are added in the future (e.g., for new features), unless the "exit" check is consistently applied, there could be blind spots.
+
+**Summary Table:**
+
+| Input Prompt Location                | "exit" disconnects? | Notes                                      |
+|--------------------------------------|---------------------|---------------------------------------------|
+| Username prompt                      | No                  | Treated as username, not as disconnect      |
+| Message type prompt                  | Yes                 | Explicitly handled                         |
+| Group command/message prompts        | Yes                 | Explicitly handled                         |
+| File transfer prompts                | Yes                 | Explicitly handled                         |
+| Offline message prompts              | Yes                 | Explicitly handled                         |
+| Encrypted message prompt             | Yes                 | Explicitly handled                         |
+| Private/broadcast message prompts    | Yes                 | Explicitly handled                         |
+| File save prompt (receive_messages)  | No                  | Not treated as disconnect                  |
+
+**Recommendation:**  
+If you want to allow "exit" to disconnect at absolutely every input prompt, add a check for "exit" at the username prompt and any other user input locations (such as file save prompts in the receive thread).
+
+Let me know if you want a code example for handling "exit" at the username prompt or elsewhere.
+
+
+---
+
+

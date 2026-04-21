@@ -150,7 +150,7 @@ Once this was done, VSCode identified various errors in the code, and I asked Co
 ---
 
 
-# 6 GUI and Testing
+# 6 Error Resolution and Bonus Feature Testing
 
 I tried to start the server and a client to test all the added features, but the following errors occured:
 
@@ -172,4 +172,10 @@ Neither Client Terminal was able to perform any further actions after entering t
 
 After making these adjustments, additional Pylance and Python errors were identified and I tried implementing fixes to resolve them.  Most of these had to do with function call mismatches, unclear types, missing parameters, and unused imports. I used the provided examples to guide my manual adjustments to the code to resolve these errors. I repeated this process several times, but after three iterations of this process, errors still persisted. I then allowed the editor to make changes to the specific sections that were still causing errors after my manual adjustments, and this resolved all remaining errors.
 
-Once no more errors were identified by the editor, I ran the server and client again to test if the connection and communication were fully repaired and would work properly. The following results occured:
+Once no more errors were identified by the editor, I ran the server and client again to test if the connection and communication were fully repaired and would work properly. I was finally able to successfully test the added Bonus Features, and all that I tested were successful! The following results occured:
+
+![alt text](image.png)
+![alt text](image-1.png)
+![alt text](image-2.png)
+![alt text](image-3.png)
+![alt text](image-4.png)
