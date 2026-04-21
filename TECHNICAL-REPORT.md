@@ -199,7 +199,7 @@ Once this was done I tested the server and this new GUI Client to verify that th
 ![alt text](image-5.png)
 ![alt text](image-6.png)
 
-This was due to a bug that occured in the broadcasting protocol, which was fixed after a code review by Copilot. I then ran the test again, and this time it was successful! Below are screenshots of the successful testing of this feature as I tested and made fixes during tests:
+This was due to a bug that occured in the broadcasting protocol, which was fixed after a code review by Copilot. I then ran the test again, and this time it was successful! Below are screenshots of the successful testing of this feature as I tested and made fixes during tests (such as the broadcasting bug and Offline messaging issues):
 
 ![alt text](image-7.png)
 ![alt text](image-8.png)
@@ -216,3 +216,10 @@ This was due to a bug that occured in the broadcasting protocol, which was fixed
 ![alt text](image-19.png)
 ![alt text](image-20.png)
 ![alt text](image-21.png)
+![alt text](image-22.png)
+![alt text](image-23.png)
+![alt text](image-24.png)
+![alt text](image-25.png)
+![alt text](image-26.png)
+
+I did my best to implement the necessary fixes manually, but when I really hit the wall and had attempted to fix the same issue several times with no success, I allowed the editor to make changes to the specific sections that were still causing errors after my manual adjustments, and this resolved all remaining errors.

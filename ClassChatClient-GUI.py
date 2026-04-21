@@ -116,10 +116,32 @@ class ClassChatClientGUI:
         elif msg.get("type") == "file_transfer":
             display = f"[File] {msg['sender']} sent '{msg['filename']}'\n"
             self.chat_area.insert(tk.END, display)
-            save_path = filedialog.asksaveasfilename(initialfile=msg['filename'])  # type: ignore
-            if save_path:
-                with open(save_path, "wb") as f:
-                    f.write(base64.b64decode(msg['filedata']))  # type: ignore
+            self.chat_area.see(tk.END)
+            try:
+                save_path = filedialog.asksaveasfilename(
+                    initialfile=msg['filename'],
+                    title="Save received file",
+                    defaultextension="",
+                    filetypes=[("All Files", "*.*")]
+                )
+                if save_path:
+                    with open(save_path, "wb") as f:
+                        f.write(base64.b64decode(msg['filedata']))
+                    self.chat_area.config(state=tk.NORMAL)
+                    self.chat_area.insert(tk.END, f"[System] File saved as '{save_path}'\n")
+                    self.chat_area.config(state=tk.DISABLED)
+                    self.chat_area.see(tk.END)
+                else:
+                    self.chat_area.config(state=tk.NORMAL)
+                    self.chat_area.insert(tk.END, "[System] File save canceled by user.\n")
+                    self.chat_area.config(state=tk.DISABLED)
+                    self.chat_area.see(tk.END)
+            except Exception as e:
+                self.chat_area.config(state=tk.NORMAL)
+                self.chat_area.insert(tk.END, f"[Error] Failed to save file: {e}\n")
+                self.chat_area.config(state=tk.DISABLED)
+                self.chat_area.see(tk.END)
+            return  # Prevents double-inserting the display message
         elif msg.get("type") == "offline_message":
             display = f"[Offline] {msg['sender']} to {msg['receiver']}: {msg['text']}\n"
         else:
