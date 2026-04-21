@@ -7,6 +7,7 @@ The instructions state that " if you use AI/Chatgpt for your project please incl
 
 ## Session Summary
 
+...
 
 ## Session Contents
 
@@ -71,6 +72,7 @@ Set `serverName` to a valid hostname or IP address (e.g., `"localhost"` for loca
 
 ## Session Summary
 
+...
 
 ## Session Contents
 
@@ -579,6 +581,7 @@ Let me know if you want a full code snippet with this feature!
 
 ## Session Summary
 
+...
 
 ## Session Contents
 
@@ -1616,6 +1619,7 @@ With these changes, your chat will look much cleaner and be easier to follow for
 
 ## Session Summary
 
+...
 
 ## Session Contents
 
@@ -1734,6 +1738,7 @@ If you want a full, ready-to-paste client file with these improvements, just ask
 
 ## Session Summary
 
+...
 
 ## Session Contents
 
@@ -4787,6 +4792,7 @@ If you want a full code block for encrypted message forwarding, let me know!
 
 ## Session Summary
 
+...
 
 ## Session Contents
 
@@ -6498,6 +6504,7 @@ If you want a ready-to-paste code snippet for this section, let me know!
 
 ## Session Summary
 
+...
 
 ## Session Contents
 
