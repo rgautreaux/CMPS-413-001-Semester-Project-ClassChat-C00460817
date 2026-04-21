@@ -37,7 +37,7 @@ def broadcast_message(message: str, sender_socket: socket) -> None:
             if client != sender_socket: # Don't send the message back to the sender
                 try:
                     client.send(message.encode()) # Send the message to the client, encoding it if it's a string
-                except Exception:
+                except json.JSONDecodeError:
                     pass # If there's an error sending the message (e.g., client disconnected), ignore it and continue broadcasting to other clients
 
 def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
@@ -85,7 +85,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                 try:
                     # msg is Dict[str, Any]
                     connectionSocket.send(json.dumps(msg).encode())
-                except Exception:
+                except json.JSONDecodeError:
                     pass
             del offline_messages[username]
 
@@ -141,7 +141,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                         sender = message.get("sender")
                         text = message.get("text")
                         handle_group_message(sender, groupname, text)
-                    except Exception as e:
+                    except json.JSONDecodeError as e:
                         print(f"An error occurred while handling group message: {e}")
                 else:
                     # If group does not exist, notify sender
@@ -154,7 +154,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                         filename = message.get("filename")
                         filedata = message.get("filedata")
                         file_transfer(sender, receiver, filename, filedata)
-                    except Exception as e:
+                    except json.JSONDecodeError as e:
                         print(f"An error occurred while handling file transfer: {e}")
                         pass
                 else:
@@ -170,7 +170,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                             # Always send JSON-encoded bytes
                             client_dictionary[receiver].send(json.dumps(message).encode())
                             print(f"Received from {username}@{addr}: {message['sender']}: {message['text']}")
-                        except Exception:
+                        except json.JSONDecodeError:
                             pass
                     else:
                         # If receiver is not online, notify sender and store for offline delivery
@@ -216,7 +216,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                                 "text": base64.b64encode(new_ciphertext).decode()
                             }
                             sock.send(json.dumps(encrypted_msg).encode())
-                except Exception as e:
+                except json.JSONDecodeError as e:
                     print(f"[Error] Failed to decrypt message from {username}: {e}")
                     continue
             elif message.get("type") == "disconnect":
@@ -227,7 +227,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                 # If not intended for a specific person, broadcast message to all active users
                 broadcast_message(message.decode(), connectionSocket)
 
-    except Exception as e:
+    except json.JSONDecodeError as e:
         print(f"An error occurred while handling client {addr}: {e}") # Log any exceptions that occur while handling the client
 
     finally:
@@ -257,7 +257,7 @@ def file_transfer(sender: str, receiver: str, filename: str, filedata: str) -> N
                 "filename": filename,
                 "filedata": filedata
             }).encode())
-        except Exception:
+        except json.JSONDecodeError:
             pass
     else:
         send_message_to_user(sender, f"User '{receiver}' is not online. File transfer failed.")

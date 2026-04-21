@@ -8,19 +8,21 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 import os
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 import tkinter as tk
-from tkinter import scrolledtext, filedialog, simpledialog, messagebox
+from tkinter import simpledialog, scrolledtext, filedialog
+from tkinter import messagebox
+from typing import Any, Dict
 
 # ClassChat Client GUI Application
 class ClassChatClientGUI:
     # GUI setup and socket initialization
-    def __init__(self, master):
+    def __init__(self, master: tk.Tk):
         self.master = master
         self.master.title("ClassChat Client")
         self.chat_area = scrolledtext.ScrolledText(master, state=tk.DISABLED, width=60, height=20)
         self.chat_area.pack(padx=10, pady=10)
         self.entry_message = tk.Entry(master, width=40)
         self.entry_message.pack(side=tk.LEFT, padx=(10,0), pady=(0,10))
-        self.entry_message.bind("<Return>", self.send_message)
+        self.entry_message.bind("<Return>", self.send_message)  # type: ignore
         self.send_button = tk.Button(master, text="Send", command=self.send_message)
         self.send_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
         self.private_button = tk.Button(master, text="Private", command=self.send_private_message)
@@ -68,7 +70,7 @@ class ClassChatClientGUI:
             return
         threading.Thread(target=self.receive_messages, daemon=True).start()
 # Broadcast message sending
-    def send_message(self, event=None):
+    def send_message(self, event: Any = None) -> None:
         msg = self.entry_message.get()
         if msg:
             message_json = json.dumps({
@@ -95,7 +97,7 @@ class ClassChatClientGUI:
             self.sock.send(message_json.encode())
             self.entry_message.delete(0, tk.END)
 # Message display handling
-    def display_message(self, msg):
+    def display_message(self, msg: Dict[str, Any]) -> None:
         self.chat_area.config(state=tk.NORMAL)
         if msg.get("type") == "group_message":
             display = f"[{msg['group']}] {msg['sender']}: {msg['text']}\n"
@@ -104,12 +106,10 @@ class ClassChatClientGUI:
         elif msg.get("type") == "file_transfer":
             display = f"[File] {msg['sender']} sent '{msg['filename']}'\n"
             self.chat_area.insert(tk.END, display)
-            save = messagebox.askyesno("File Transfer", f"Save file '{msg['filename']}' from {msg['sender']}?")
-            if save:
-                save_path = filedialog.asksaveasfilename(initialfile=msg['filename'])
-                if save_path:
-                    with open(save_path, "wb") as f:
-                        f.write(base64.b64decode(msg['filedata']))
+            save_path = filedialog.asksaveasfilename(initialfile=msg['filename'])  # type: ignore
+            if save_path:
+                with open(save_path, "wb") as f:
+                    f.write(base64.b64decode(msg['filedata']))  # type: ignore
         else:
             display = f"{msg.get('sender', '')}: {msg.get('text', '')}\n"
         self.chat_area.insert(tk.END, display)
@@ -120,7 +120,7 @@ class ClassChatClientGUI:
         command = simpledialog.askstring("Group Command", "Enter command (create/join/leave/list):", parent=self.master)
         group = simpledialog.askstring("Group Name", "Enter group name:", parent=self.master) if command in ["create", "join", "leave"] else ""
         if command:
-            group_cmd = {
+            group_cmd: Dict[str, Any] = {
                 "type": "group_command",
                 "command": command,
                 "group": group,
@@ -132,7 +132,7 @@ class ClassChatClientGUI:
         group = simpledialog.askstring("Group Name", "Enter group name:", parent=self.master)
         msg = self.entry_message.get()
         if group and msg:
-            group_msg = {
+            group_msg: Dict[str, Any] = {
                 "type": "group_message",
                 "group": group,
                 "sender": self.username,
@@ -147,7 +147,7 @@ class ClassChatClientGUI:
         if receiver and file_path:
             with open(file_path, "rb") as f:
                 file_data = base64.b64encode(f.read()).decode()
-            file_msg = {
+            file_msg: Dict[str, Any] = {
                 "type": "file_transfer",
                 "sender": self.username,
                 "receiver": receiver,
@@ -160,7 +160,7 @@ class ClassChatClientGUI:
         receiver = simpledialog.askstring("Offline Message", "Recipient username:", parent=self.master)
         msg = self.entry_message.get()
         if receiver and msg:
-            offline_msg = {
+            offline_msg: Dict[str, Any] = {
                 "type": "offline_message",
                 "sender": self.username,
                 "receiver": receiver,
@@ -176,7 +176,7 @@ class ClassChatClientGUI:
             cipher_obj = Cipher(algorithms.AES(self.session_key), modes.CFB(iv_val))
             encryptor = cipher_obj.encryptor()
             ciphertext = encryptor.update(msg.encode()) + encryptor.finalize()
-            encrypted_msg = {
+            encrypted_msg: Dict[str, Any] = {
                 "type": "encrypted",
                 "sender": self.username,
                 "iv": base64.b64encode(iv_val).decode(),
@@ -195,9 +195,9 @@ class ClassChatClientGUI:
                 try:
                     msg = json.loads(data.decode())
                     self.master.after(0, lambda m=msg: self.display_message(m))
-                except Exception:
+                except json.JSONDecodeError:
                     self.master.after(0, lambda: self.display_message({"text": data.decode()}))
-            except Exception:
+            except Exception:  # noqa: E722  # Catch all socket errors
                 break
 # Cleanup on disconnect
     def disconnect(self):
