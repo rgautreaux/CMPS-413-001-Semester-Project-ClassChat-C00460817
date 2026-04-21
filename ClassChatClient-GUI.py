@@ -1,6 +1,5 @@
-from socket import socket, AF_INET, SOCK_STREAM
+from socket import socket
 import threading
-import sys
 import json
 import base64
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -10,59 +9,20 @@ import os
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 import tkinter as tk
 from tkinter import scrolledtext, filedialog, simpledialog, messagebox
-import threading
-import socket
-import json
-import base64
-import os
 
-ddef receive_messages():
+def receive_messages():
     while True:
         try:
             data = client_socket.recv(1024)
             if not data:
                 break
-            # If you use JSON, decode here
-            # msg = json.loads(data.decode())
+            msg = json.loads(data.decode())
             chat_area.config(state=tk.NORMAL)
             chat_area.insert(tk.END, data.decode() + '\n')
             chat_area.config(state=tk.DISABLED)
             chat_area.see(tk.END)
         except Exception:
             break
-
-serverName = 'localhost' #Server Name
-serverPort = 12000 #Port Number
-clientSocket = socket(AF_INET, SOCK_STREAM) #TCP Client Socket
-clientSocket.connect((serverName,serverPort)) #Socket Connection
-
-server_public_key = None
-session_key = None
-
-#Username Input and Sending to Server
-user_name = input('Input your Username:') #User/Client Input
-clientSocket.send(user_name.encode()) #Send username to server
-
-# Receive server's public key
-while True:
-    srv_msg = clientSocket.recv(4096)
-    srv_incoming = json.loads(srv_msg.decode())
-    if srv_incoming.get("text") == "SERVER_PUBLIC_KEY":
-        server_public_key = serialization.load_pem_public_key(srv_incoming.get("key").encode())
-        break
-
-# Generate AES session key
-session_key = os.urandom(32)  # 256-bit key
-if isinstance(server_public_key, RSAPublicKey):
-    encrypted_session_key = server_public_key.encrypt(
-        session_key,
-        padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
-    )
-    clientSocket.send(json.dumps({"type": "session_key", "key": base64.b64encode(encrypted_session_key).decode()}).encode())
-else:
-    print("[Error] Server public key is not a valid RSA public key.")
-    sys.exit(1)
-
 
 # --- Tkinter GUI Setup ---
 class ClassChatClientGUI:
@@ -92,15 +52,34 @@ class ClassChatClientGUI:
         # Socket setup, encryption, etc.
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect(('localhost', 12000))
-        # ... (username, key exchange, etc.)
-
+        self.username = simpledialog.askstring("Username", "Enter your username:", parent=self.master)
+        self.sock.send(self.username.encode())
+        # Key exchange
+        srv_msg = self.sock.recv(4096)
+        srv_incoming = json.loads(srv_msg.decode())
+        if srv_incoming.get("text") == "SERVER_PUBLIC_KEY":
+            server_public_key = serialization.load_pem_public_key(srv_incoming.get("key").encode())
+        else:
+            messagebox.showerror("Error", "Failed to receive server public key.")
+            self.master.destroy()
+            return
+        self.session_key = os.urandom(32)
+        if isinstance(server_public_key, RSAPublicKey):
+            encrypted_session_key = server_public_key.encrypt(
+                self.session_key,
+                padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
+            )
+            self.sock.send(json.dumps({"type": "session_key", "key": base64.b64encode(encrypted_session_key).decode()}).encode())
+        else:
+            messagebox.showerror("Error", "Server public key is not valid.")
+            self.master.destroy()
+            return
         threading.Thread(target=self.receive_messages, daemon=True).start()
 
     def send_message(self, event=None):
         msg = self.entry_message.get()
         if msg:
-            # Here, build the correct JSON for the message type
-            # Example: send a broadcast
+            # Broadcast
             message_json = json.dumps({
                 "type": "broadcast",
                 "sender": self.username,
@@ -124,23 +103,7 @@ class ClassChatClientGUI:
             })
             self.sock.send(message_json.encode())
             self.entry_message.delete(0, tk.END)
-
-    def receive_messages(self):
-        while True:
-            try:
-                data = self.sock.recv(4096)
-                if not data:
-                    break
-                # Parse and display message
-                try:
-                    msg = json.loads(data.decode())
-                    # Format and display in chat_area
-                    self.display_message(msg)
-                except Exception:
-                    self.display_message({"text": data.decode()})
-            except Exception:
-                break
-
+            
     def display_message(self, msg):
         self.chat_area.config(state=tk.NORMAL)
         # Format message based on type
@@ -150,7 +113,13 @@ class ClassChatClientGUI:
             display = f"[Private] {msg['sender']} to {msg['receiver']}: {msg['text']}\n"
         elif msg.get("type") == "file_transfer":
             display = f"[File] {msg['sender']} sent '{msg['filename']}'\n"
-            # Prompt to save file, etc.
+            self.chat_area.insert(tk.END, display)
+            save = messagebox.askyesno("File Transfer", f"Save file '{msg['filename']}' from {msg['sender']}?")
+            if save:
+                save_path = filedialog.asksaveasfilename(initialfile=msg['filename'])
+                if save_path:
+                    with open(save_path, "wb") as f:
+                        f.write(base64.b64decode(msg['filedata']))
         else:
             display = f"{msg.get('sender', '')}: {msg.get('text', '')}\n"
         self.chat_area.insert(tk.END, display)
@@ -225,6 +194,14 @@ class ClassChatClientGUI:
             }
             self.sock.send(json.dumps(encrypted_msg).encode())
             self.entry_message.delete(0, tk.END)
+
+    def disconnect(self):
+        try:
+            self.sock.send(json.dumps({"type": "disconnect"}).encode())
+            self.sock.close()
+        except Exception:
+            pass
+        self.master.destroy()
 
 root = tk.Tk()
 app = ClassChatClientGUI(root)
