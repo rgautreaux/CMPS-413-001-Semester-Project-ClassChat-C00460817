@@ -183,3 +183,10 @@ Once no more errors were identified by the editor, I ran the server and client a
 ---
 
 # 7 GUI Implementation for Easy Access and Use of ClassChat
+
+Seeing as how the instructions for this project mentioned that, while not required, a GUI Window would be highly encouraged for us to add.  Thus, I asked Copilot what the best method was to do this, and it recommended the `tkinter` library.  It said this would be easiest to add to the existing Python Codebase, and safest out of its three recommendations to not damage or break the exsisting codebase. I worked hard to make sure that the existing Server and Client worked, and did not want to risk any more errors or problems.  
+
+However, I was unfamiliar with `tkinter`, and thus asked for guidance andexamples of how to integrate the library with my exsisting Client. It provided me with a general overview of how to do this, and then I used the provided examples to manually adjust a new `ClassChatClient-GUI.py` file to implement these changes. I made a duplicate Client File instead of adding this feature to the existing one to avoid any conflicts. If this GUI implementation went sideways and caused more problems than improvements, then my original Command Line Client would still be intact and functional.
+
+My first attempt at implementing the GUI was rough, and caused many errors in the code itself. I was unsure of exactly how to replace the Command Line prompts, inputs, and functions with this new and unfamiliar library. This resulted in me asking Copilot for a more extensive guide on how to integrate this library with the existing Client codebase.  From there, it game me a more exact and detailed example of how to refactor the exsising code into a GUI implementation.
+
