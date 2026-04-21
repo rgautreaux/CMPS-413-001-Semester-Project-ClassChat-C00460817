@@ -76,9 +76,18 @@ class ClassChatClientGUI:
         self.entry_message.bind("<Return>", self.send_message)
         self.send_button = tk.Button(master, text="Send", command=self.send_message)
         self.send_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
-        # Add more buttons/menus for group, file, etc.
-        # Example: self.group_button = tk.Button(master, text="Group", command=self.group_command)
-        # self.group_button.pack(...)
+        self.private_button = tk.Button(master, text="Private", command=self.send_private_message)
+        self.private_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
+        self.group_cmd_button = tk.Button(master, text="Group Command", command=self.group_command)
+        self.group_cmd_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
+        self.group_msg_button = tk.Button(master, text="Group Message", command=self.send_group_message)
+        self.group_msg_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
+        self.file_button = tk.Button(master, text="Send File", command=self.send_file)
+        self.file_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
+        self.offline_button = tk.Button(master, text="Offline Message", command=self.send_offline_message)
+        self.offline_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
+        self.encrypted_button = tk.Button(master, text="Encrypted Send", command=self.send_encrypted_message)
+        self.encrypted_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
 
         # Socket setup, encryption, etc.
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
