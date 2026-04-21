@@ -179,3 +179,7 @@ Once no more errors were identified by the editor, I ran the server and client a
 ![alt text](image-2.png)
 ![alt text](image-3.png)
 ![alt text](image-4.png)
+
+---
+
+# 7 GUI Implementation for Easy Access and Use of ClassChat

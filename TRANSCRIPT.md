@@ -6402,6 +6402,57 @@ If you want to allow "exit" to disconnect at absolutely every input prompt, add 
 
 Let me know if you want a code example for handling "exit" at the username prompt or elsewhere.
 
+Your codebase is now **successfully updated** to distinguish between intentional and unintentional disconnects, with only a minor improvement possible for clarity:
+
+---
+
+### What You Did Right
+
+- **Client:**  
+  - Sends a `{"type": "disconnect"}` message before closing the socket on all user-initiated exits.
+- **Server:**  
+  - Checks for `message.get("type") == "disconnect"` and logs an intentional exit.
+  - Logs unexpected disconnects only if the disconnect message was not received.
+
+---
+
+### Minor Suggestion
+
+You currently set `intentional_exit = False` at the start, but you do not set it to `True` when handling the `"disconnect"` message.  
+This means that if the client sends a disconnect message, the server will log both an intentional and an unexpected disconnect.
+
+**To fix this, set the flag when handling the disconnect:**
+
+```python
+elif message.get("type") == "disconnect":
+    print(f"Client {username}@{addr} exited intentionally.")
+    intentional_exit = True
+    break  # Exit the loop to trigger cleanup
+```
+
+And keep your check:
+
+```python
+if not data:
+    if not intentional_exit:
+        print(f"Client {addr} disconnected unexpectedly.")
+    break
+```
+
+---
+
+### Summary
+
+- **Your client is correct.**
+- **Your server is correct with the above minor flag fix.**
+- This will ensure only one log message per disconnect, and the type (intentional/unintentional) will be clear.
+
+---
+
+**In summary:**  
+You have implemented the correct protocol for distinguishing disconnect types. Just add the `intentional_exit = True` line as shown above for perfect clarity and to avoid double-logging.
+
+If you want a ready-to-paste code snippet for this section, let me know!
 
 ---
 
