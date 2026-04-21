@@ -99,7 +99,17 @@ class ClassChatClientGUI:
 # Message display handling
     def display_message(self, msg: Dict[str, Any]) -> None:
         self.chat_area.config(state=tk.NORMAL)
-        if msg.get("type") == "group_message":
+        if msg.get("type") == "encrypted":
+            try:
+                iv = base64.b64decode(msg["iv"])
+                ciphertext = base64.b64decode(msg["text"])
+                cipher = Cipher(algorithms.AES(self.session_key), modes.CFB(iv))
+                decryptor = cipher.decryptor()
+                plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+                display = f"[Encrypted] {msg.get('sender', '')}: {plaintext.decode()}\n"
+            except Exception as e:
+                display = f"[Encrypted] (Failed to decrypt): {e}\n"
+        elif msg.get("type") == "group_message":
             display = f"[{msg['group']}] {msg['sender']}: {msg['text']}\n"
         elif msg.get("type") == "private_message":
             display = f"[Private] {msg['sender']} to {msg['receiver']}: {msg['text']}\n"

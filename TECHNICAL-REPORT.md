@@ -214,3 +214,5 @@ This was due to a bug that occured in the broadcasting protocol, which was fixed
 ![alt text](image-17.png)
 ![alt text](image-18.png)
 ![alt text](image-19.png)
+![alt text](image-20.png)
+![alt text](image-21.png)
