@@ -4,6 +4,12 @@ The instructions state that " if you use AI/Chatgpt for your project please incl
 
 ## 1 Client-Server Communication Test Error Diagnosis and Resolution
 
+
+## Session Summary
+
+
+## Session Contents
+
 User: The server launched without issue, but this error occured when attempting to lanch the client:
 
 ```
@@ -61,6 +67,12 @@ Set `serverName` to a valid hostname or IP address (e.g., `"localhost"` for loca
 ---
 
 # 2 Github Assistance in Implementing and Diagnosing Issues with Multiplexing
+
+
+## Session Summary
+
+
+## Session Contents
 
 User: What are the `select()`, `poll()` and `epoll()` calls for I/O Multiplexing? How are they used?
 
@@ -563,6 +575,12 @@ Let me know if you want a full code snippet with this feature!
 ---
 
 # 3 Multi-Thread Communication Implementation for Multiple Clients (Planning and Corrections)
+
+
+## Session Summary
+
+
+## Session Contents
 
 User: Analyze the codebase and identify if continuing to use Treading or creating a socketserver model is the best course of action for  implementing Multi-Thread Communication  so that multiple clients can message each other
 
@@ -1596,6 +1614,13 @@ With these changes, your chat will look much cleaner and be easier to follow for
 
 # 4 Client-Client Communication Implementation, Debugging, and Testing
 
+## Session Summary
+
+
+## Session Contents
+
+Copilot: 
+
 Your code is functionally correct, but the **cluttered output** is due to multiple JSON system/info messages being printed in a row, and sometimes as raw JSON rather than as clear, user-friendly lines. This is especially visible when a client connects and receives several info/ACK messages at once.
 
 ### **How to Clean Up the Output**
@@ -1705,6 +1730,12 @@ If you want a full, ready-to-paste client file with these improvements, just ask
 ---
 
 # 5 Bonus Section
+
+
+## Session Summary
+
+
+## Session Contents
 
 User: The  following  tasks from the "BONUS SECTION" of the instructions aim to  enhance  ClassChat’s  function.
  ```
@@ -4753,6 +4784,12 @@ If you want a full code block for encrypted message forwarding, let me know!
 
 # 6 Error Resolutions
 
+
+## Session Summary
+
+
+## Session Contents
+
 User: What are causing all tehse errors? Explain them in-depth and how to resolve them so that the codebase is error free
 
 GitHub Copilot: Based on the screenshots you provided, your codebase is experiencing a large number of errors and warnings in both your Python files (ClassChatClient.py, ClassChatServer.py) and your JSON file (MessageFormat.json). Here’s an in-depth explanation of the causes and how to resolve them:
@@ -6458,6 +6495,11 @@ If you want a ready-to-paste code snippet for this section, let me know!
 
 
 # 7 GUI Client Creation, Implementation Guidance, and Correcting
+
+## Session Summary
+
+
+## Session Contents
 
 User: GUI is not required but highly encouraged acording to the instructions:
 ```
