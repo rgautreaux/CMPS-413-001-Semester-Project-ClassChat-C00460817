@@ -154,9 +154,22 @@ Once this was done, VSCode identified various errors in the code, and I asked Co
 
 I tried to start the server and a client to test all the added features, but the following errors occured:
 
-![alt text](image.png)
-![alt text](image-1.png)
+![alt text](evidence-screenshots/Pylance_Problems1.png)
+![alt text](evidence-screenshots/Pylance_Problems2.png)
 
 I had GitHub Copilot review these errors, and it identified that the issues were due to Import errors, Attribute errors, Syntax errors, and Formatting Errors regarding the implementation of `cryptography` to implement the Encryption Bonus Feature.  These errors were mostly in part due to the fact that I was working on my other computer, which did not have the `cryptography` library installed, and thus I had to install it using pip. 
 
-After installing the library, I was able to resolve these errors and run the server and client successfully. I then ran a test to verify that all features were working properly, including the encryption features. Below are screenshots of the successful testing of these features:
+After installing the library, I was able to resolve these errors and run the server and client successfully. However, while they were able to run, new and confusing errors began to occur when establishing the server-client connection and communication. The first test I ran resulted in the following results:
+
+![alt text](evidence-screenshots/Client-Server_DISCONNECT1.png)
+![alt text](evidence-screenshots/Client-Server_DISCONNECT2.png)
+![alt text](evidence-screenshots/Client-Server_DISCONNECT3.png)
+
+Neither Client Terminal was able to perform any further actions after entering their username, and the server terminal was shown to abort client-server connections. I asked GitHub Copilot for assistance in diagnosing the source of these errors, and it said that the server crashed due to a server-client protocol mismatch.  I asked it to explain this in more detail, and it said that the client was expecting a different Public Key from the server than what it was recieving, resulting in the client being unable to proceed to the main loop after providing a username. It explained what changes needed to be made to resolve this problem, and I used the provided examples to manually adjust my code to implement these changes. 
+
+![alt text](evidence-screenshots/Pylance_Problems3.png)
+![alt text](evidence-screenshots/Pylance_Problems4.png)
+
+After making these adjustments, additional Pylance and Python errors were identified and I tried implementing fixes to resolve them.  Most of these had to do with function call mismatches, unclear types, missing parameters, and unused imports. I used the provided examples to guide my manual adjustments to the code to resolve these errors. I repeated this process several times, but after three iterations of this process, errors still persisted. I then allowed the editor to make changes to the specific sections that were still causing errors after my manual adjustments, and this resolved all remaining errors.
+
+Once no more errors were identified by the editor, I ran the server and client again to test if the connection and communication were fully repaired and would work properly. The following results occured:

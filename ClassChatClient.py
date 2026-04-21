@@ -3,7 +3,6 @@ import threading
 import sys
 import json
 import base64
-import cryptography
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -95,7 +94,7 @@ clientSocket.send(user_name.encode()) #Send username to server
 while True:
     srv_msg = clientSocket.recv(4096)
     srv_incoming = json.loads(srv_msg.decode())
-    if srv_incoming.get("text") == "send_messagePUBLIC_KEY":
+    if srv_incoming.get("text") == "SERVER_PUBLIC_KEY":
         server_public_key = serialization.load_pem_public_key(srv_incoming.get("key").encode())
         break
 
@@ -123,7 +122,15 @@ while True:
         group_input = input('Group Command (Command or Message): ').strip()
         if group_input.lower() == "command": #If the user wants to send a group command
             command = input('Group Command (Create, Join, Leave, List): ').strip() #User/Client Input for group command type
+            if command.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
+                print("[System] Disconnecting from server...")
+                clientSocket.close()
+                sys.exit()
             group_name = input('Group Name: ').strip() if command.lower() in ["create", "join", "leave"] else ""
+            if group_name.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
+                print("[System] Disconnecting from server...")
+                clientSocket.close()
+                sys.exit()
             group_cmd = {
                 "type": "group_command",
                 "command": command.lower(),
@@ -134,7 +141,15 @@ while True:
             continue 
         elif group_input.lower() == "message": #If the user wants to send a group message
             group_name = input('Group Name: ').strip()
+            if group_name.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
+                print("[System] Disconnecting from server...")
+                clientSocket.close()
+                sys.exit()
             group_message = input('Group Message: ').strip() #User/Client Input for group message text
+            if group_message.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
+                print("[System] Disconnecting from server...")
+                clientSocket.close()
+                sys.exit()
             group_msg = {
                 "type": "group_message",
                 "group": group_name,
@@ -143,13 +158,25 @@ while True:
             }
             clientSocket.send(json.dumps(group_msg).encode())
             continue
+        elif group_input.lower() == "exit": #If the user wants to exit now, let them exit
+            print("[System] Disconnecting from server...")
+            clientSocket.close()
+            sys.exit()
     elif msg_type.lower() == "file_transfer":
         receiver = input('To (username): ').strip() #User/Client Input for recipient of file
         if not receiver:
             continue
+        elif receiver.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
+            print("[System] Disconnecting from server...")
+            clientSocket.close()
+            sys.exit()
         file_name = input('Filename: ').strip() #User/Client Input for filename if message type is file transfer
         if not file_name:
             continue
+        elif file_name.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
+            print("[System] Disconnecting from server...")
+            clientSocket.close()
+            sys.exit()
         try:
             with open(file_name, "rb") as file_in:
                 file_data = base64.b64encode(file_in.read()).decode()
@@ -173,10 +200,14 @@ while True:
         receiver = input('To (username): ').strip() # Prompt for recipient
         if not receiver:
             continue
+        elif receiver.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
+            print("[System] Disconnecting from server...")
+            clientSocket.close()
+            sys.exit()
         offline_message = input('Offline Message: ').strip() #User/Client Input for offline message if message type is offline message
         if not offline_message:
             continue
-        if offline_message.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
+        elif offline_message.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
             clientSocket.close()
             sys.exit()
@@ -192,6 +223,10 @@ while True:
         plaintext = input('Encrypted Message: ').strip()
         if not plaintext:
             continue
+        if plaintext.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
+            print("[System] Disconnecting from server...")
+            clientSocket.close()
+            sys.exit()
         iv_val = os.urandom(16)
         cipher_obj = Cipher(algorithms.AES(session_key), modes.CFB(iv_val))
         encryptor = cipher_obj.encryptor()
@@ -208,10 +243,14 @@ while True:
         receiver = input('To (username): ').strip() #User/Client Input for recipient of message
         if not receiver:
             continue
+        elif receiver.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
+            print("[System] Disconnecting from server...")
+            clientSocket.close()
+            sys.exit()
         message_text = input('Message: ').strip() #User/Client Input for message to send
         if not message_text:
             continue
-        if message_text.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
+        elif message_text.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
             clientSocket.close()
             sys.exit()
@@ -227,10 +266,14 @@ while True:
         receiver = input('To (username or "all"): ').strip() #User/Client Input for recipient of message
         if not receiver:
             receiver = "all"
+        elif receiver.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
+            print("[System] Disconnecting from server...")
+            clientSocket.close()
+            sys.exit()
         message_text = input('Message: ').strip() #User/Client Input for message to send
         if not message_text:
             continue
-        if message_text.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
+        elif message_text.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
             print("[System] Disconnecting from server...")
             clientSocket.close()
             sys.exit()
@@ -242,6 +285,10 @@ while True:
         }
         clientSocket.send(json.dumps(msg).encode())
         continue
+    elif msg_type.strip().lower() == "exit": # If the user types "exit" at the message type prompt, close the connection and exit the program
+        print("[System] Disconnecting from server...")
+        clientSocket.close()
+        sys.exit()
 
 def send_group_message_to_user(group: str, sender: str, message: str):
     group_message_obj = {

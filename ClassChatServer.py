@@ -1,8 +1,7 @@
 import threading
 import json
-import cryptography
 from socket import socket, AF_INET, SOCK_STREAM
-from typing import Tuple, List
+from typing import Tuple, List, Dict, Any
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -18,11 +17,11 @@ print('The ClassChat Server is ready.')
 clients: List[socket] = [] # List to keep track of connected client sockets
 client_dictionary: dict[str, socket] = {} # Dictionary to map usernames to their sockets
 clients_lock: threading.Lock = threading.Lock() # Lock to ensure thread-safe access 
-groups = {} # Dictionary to map group names to lists of member usernames
-offline_messages = {} # Dictionary to store offline messages for users
-users: dict[str, socket] = {}
-messages: list[str] = []
-client_session_keys = {}  # Maps username to their AES session key
+groups: Dict[str, set[str]] = {} # Dictionary to map group names to sets of member usernames
+offline_messages: Dict[str, list[Dict[str, Any]]] = {} # Dictionary to store offline messages for users
+users: dict[str, socket] = {} # (Unused, but kept for possible future use)
+messages: list[str] = [] # (Unused, but kept for possible future use)
+client_session_keys: dict[str, bytes] = {}  # Maps username to their AES session key
 
 # Generate RSA key pair (once, at server startup)
 private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -83,6 +82,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
         if username in offline_messages:
             for msg in offline_messages[username]:
                 try:
+                    # msg is Dict[str, Any]
                     connectionSocket.send(json.dumps(msg).encode())
                 except Exception:
                     pass
@@ -93,7 +93,6 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
         # Send a welcome message to the new client (as info JSON)
         connectionSocket.send(json.dumps({"status": "info", "text": f"Welcome to ClassChat, {username}!"}).encode())
         connectionSocket.send(json.dumps({"status": "ACK", "message": "Connection Established."}).encode()) # Send acknowledgment to the client that the connection is established
-        connectionSocket.send(json.dumps({"status": "info", "text": "To message a specific user, type '@username message'. To message all users, just type your message."}).encode())
         connectionSocket.send(json.dumps({"status": "info", "text": "Type 'exit' to disconnect from the server."}).encode())
 
         # Step 6: Main message loop - handle all incoming messages from this client
@@ -142,6 +141,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                     except Exception as e:
                         print(f"An error occurred while handling group message: {e}")
                 else:
+                    # If group does not exist, notify sender
                     send_message_to_user(message_parse.get("sender"), f"Group '{groupname}' does not exist.")
             elif message_parse.get("type") == "file_transfer":
                 receiver = message_parse.get("receiver", "").strip()
@@ -155,6 +155,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                         print(f"An error occurred while handling file transfer: {e}")
                         pass
                 else:
+                    # If receiver is not online, notify sender and store for offline delivery
                     send_message_to_user(message_parse.get("sender"), f"User '{receiver}' is not online. File transfer failed.")
                     offline_messages.setdefault(receiver, []).append(message_parse)
             elif message_parse.get("type") == "private_message":
@@ -169,6 +170,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                         except Exception:
                             pass
                     else:
+                        # If receiver is not online, notify sender and store for offline delivery
                         send_message_to_user(message_parse.get("sender"), f"User '{receiver}' is not online. Message delivery failed.")
                         offline_messages.setdefault(receiver, []).append(message_parse)
             elif message_parse.get("type") == "broadcast":
@@ -214,7 +216,6 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                 except Exception as e:
                     print(f"[Error] Failed to decrypt message from {username}: {e}")
                     continue
-
             else:
                 # If not intended for a specific person, broadcast message to all active users
                 broadcast_message(message.decode(), connectionSocket)
@@ -239,7 +240,8 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
         print(f"Connection with client {addr} closed.")
         connectionSocket.close()
 
-def file_transfer(sender, receiver, filename, filedata):
+def file_transfer(sender: str, receiver: str, filename: str, filedata: str) -> None:
+    """Transfer a file from sender to receiver."""
     if receiver in client_dictionary:
         try:
             client_dictionary[receiver].send(json.dumps({
@@ -254,7 +256,8 @@ def file_transfer(sender, receiver, filename, filedata):
         send_message_to_user(sender, f"User '{receiver}' is not online. File transfer failed.")
 
 
-def handle_group_message(sender, groupname, message):
+def handle_group_message(sender: str, groupname: str, message: str) -> None:
+    """Handle sending a group message from sender to all group members."""
     if groupname in groups and sender in groups[groupname]:
         for member in groups[groupname]:
             if member != sender:
@@ -270,9 +273,11 @@ def handle_group_message(sender, groupname, message):
                         "text": message
                     })
     else:
+        # Notify sender if they are not a member of the group
         send_message_to_user(sender, "You are not a member of this group.")
 
-def send_group_message_to_user(username, groupname, sender, message):
+def send_group_message_to_user(username: str, groupname: str, sender: str, message: str) -> None:
+    """Send a group message to a specific user."""
     if username in client_dictionary:
         try:
             client_dictionary[username].send(json.dumps({
@@ -284,13 +289,13 @@ def send_group_message_to_user(username, groupname, sender, message):
         except (OSError, ValueError, json.JSONDecodeError):
             print(f"[Warning] Failed to send group message to {username}.")
 
-def send_message_to_user(username: str, sender: str, message: str) -> None:
+def send_message_to_user(username: str, message: str) -> None:
+    """Send an informational message to a specific user."""
     if username in client_dictionary:
         try:
             client_dictionary[username].send(json.dumps({"status": "info", "text": message}).encode())
         except (OSError, ValueError, json.JSONDecodeError):
             print(f"[Warning] Failed to send info message to {username}.")
-
 while True:
     connectionSocket, addr = serverSocket.accept() # Wait for a new client to connect
     threading.Thread(target=handle_client, args=(connectionSocket, addr), daemon=True).start() # Start a new thread to handle the client's communication with the server
