@@ -41,7 +41,8 @@ def broadcast_message(message: str, sender_socket: socket) -> None:
                     pass # If there's an error sending the message (e.g., client disconnected), ignore it and continue broadcasting to other clients
 
 def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
-    username = "<unknown>"  # Initialize before try to avoid unbound variable
+    username = "<unknown>"
+    intentional_exit = False  # Track if disconnect was intentional
 
     try:
         # Step 1: Receive the username from the client
@@ -99,8 +100,8 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
         while True: # Continuously listen for messages from the client
             data = connectionSocket.recv(1024) # Receive a message from the client
             if not data:
-                # Unexpected disconnect
-                print(f"Client {addr} disconnected unexpectedly.")
+                if not intentional_exit:
+                    print(f"Client {addr} disconnected unexpectedly.")
                 break # If the client has disconnected, exit the loop
             message = json.loads(data.decode()) # Attempt to parse the message as JSON
 
@@ -218,6 +219,10 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                 except Exception as e:
                     print(f"[Error] Failed to decrypt message from {username}: {e}")
                     continue
+            elif message.get("type") == "disconnect":
+                print(f"Client {username}@{addr} exited intentionally.")
+                intentional_exit = True
+                break  # Exit the loop to trigger cleanup
             else:
                 # If not intended for a specific person, broadcast message to all active users
                 broadcast_message(message.decode(), connectionSocket)
