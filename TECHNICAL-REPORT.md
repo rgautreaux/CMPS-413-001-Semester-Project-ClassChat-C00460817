@@ -199,7 +199,7 @@ Once this was done I tested the server and this new GUI Client to verify that th
 ![alt text](image-5.png)
 ![alt text](image-6.png)
 
-This was due to a bug that occured in the broadcasting protocol, which was fixed after a code review by Copilot. I then ran the test again, and this time it was successful! Below are screenshots of the successful testing of this feature as I tested and made fixes during tests (such as the broadcasting bug and Offline messaging issues):
+This was due to a bug that occured in the broadcasting protocol, which was fixed after a code review by Copilot. I then ran the test again, and this time it was successful! Below are screenshots of the successful testing of this feature as I tested and made fixes during tests (such as the broadcasting bug and Offline messaging issues). All these features are now successfully working within the Command Line and GUI implementation:
 
 ![alt text](image-7.png)
 ![alt text](image-8.png)
@@ -216,10 +216,15 @@ This was due to a bug that occured in the broadcasting protocol, which was fixed
 ![alt text](image-19.png)
 ![alt text](image-20.png)
 ![alt text](image-21.png)
+![alt text](image-27.png)
+![alt text](image-28.png)
+![alt text](image-29.png)
+![alt text](image-30.png)
+
+I did my best to implement the necessary fixes manually, but when I really hit the wall and had attempted to fix the same issue several times with no success, I allowed the editor to make changes to the specific sections that were still causing errors after my manual adjustments, and resolved most of the features that needed fixing. The only feature I was not able to get working was the File Transfer feature, which I attempted to fix manually several times with no success. I then allowed the editor to make changes to the specific sections that were still not working after my manual adjustments, and this still left the File Transfer Feature inoperable. It would allow files to be sent, but the recipiant would not recieve the file transfered (nor recieve any kind of notification, error message, etc.). As it is a Bonus Feature and not Required, I decided to leave it as is and not risk breaking any of the other features that were working properly to try to fix this one. Below are screenshots of the testing of this feature, despite my efforts to fix it:
+
 ![alt text](image-22.png)
 ![alt text](image-23.png)
 ![alt text](image-24.png)
 ![alt text](image-25.png)
 ![alt text](image-26.png)
-
-I did my best to implement the necessary fixes manually, but when I really hit the wall and had attempted to fix the same issue several times with no success, I allowed the editor to make changes to the specific sections that were still causing errors after my manual adjustments, and this resolved all remaining errors.
