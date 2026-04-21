@@ -151,3 +151,12 @@ Once this was done, VSCode identified various errors in the code, and I asked Co
 
 
 # 6 GUI and Testing
+
+I tried to start the server and a client to test all the added features, but the following errors occured:
+
+![alt text](image.png)
+![alt text](image-1.png)
+
+I had GitHub Copilot review these errors, and it identified that the issues were due to Import errors, Attribute errors, Syntax errors, and Formatting Errors regarding the implementation of `cryptography` to implement the Encryption Bonus Feature.  These errors were mostly in part due to the fact that I was working on my other computer, which did not have the `cryptography` library installed, and thus I had to install it using pip. 
+
+After installing the library, I was able to resolve these errors and run the server and client successfully. I then ran a test to verify that all features were working properly, including the encryption features. Below are screenshots of the successful testing of these features:
