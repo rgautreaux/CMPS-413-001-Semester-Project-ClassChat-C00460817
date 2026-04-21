@@ -8622,3 +8622,120 @@ Your file is ready for use and should not produce any runtime or critical static
 
 ---
 
+User: Why did this occur when trying to test the new GUI Client? How can it be fixed? Provide exact solutions based on the current code
+
+GitHub Copilot: The error you encountered is:
+
+```
+AttributeError: 'dict' object has no attribute 'decode'
+```
+
+This happened in your server code at this line:
+```
+broadcast_message(message.decode(), connectionSocket)
+```
+The error means that `message` is already a Python dictionary, not a bytes object, so calling `.decode()` on it is invalid.
+
+### Why did this happen?
+
+- In your **GUI client** (ClassChatClient-GUI.py), you are sending messages like this:
+  ```python
+  self.sock.send(json.dumps(message_json).encode())
+  ```
+  This means the client always sends a JSON-encoded string (as bytes) to the server.
+
+- On the **server** (ClassChatServer.py), you receive and decode the message:
+  ```python
+  message = json.loads(data.decode())
+  ```
+  Now, `message` is a Python dictionary.
+
+- Later, you try to do:
+  ```python
+  broadcast_message(message.decode(), connectionSocket)
+  ```
+  But `message` is already a dict, so `.decode()` is not valid.
+
+### How to fix it
+
+**Solution:**  
+When calling `broadcast_message`, you should re-serialize the dictionary to a JSON string before sending, like this:
+```python
+broadcast_message(json.dumps(message), connectionSocket)
+```
+Do **not** use `.decode()` on a dictionary.
+
+#### Exact fix in your code
+
+Find the line in your server code (likely in `handle_client` in ClassChatServer.py) that looks like:
+```python
+broadcast_message(message.decode(), connectionSocket)
+```
+Change it to:
+```python
+broadcast_message(json.dumps(message), connectionSocket)
+```
+
+---
+
+**Summary:**  
+- The error is because you tried to `.decode()` a dict.
+- The fix is to use `json.dumps(message)` to convert the dict back to a JSON string before broadcasting.
+
+Let me know if you want to see the exact lines in your code where this should be changed!
+
+User: Is the Server able to communicate with the Command Client ANDGUI Client or just the Command CLient?
+
+GitHub Copilot: Based on your current code, the **server is designed to communicate with both the Command-Line Client and the GUI Client**.
+
+### Why?
+- **Both clients** send messages to the server as JSON-encoded bytes (using `json.dumps(...).encode()`).
+- The **server** expects to receive JSON-encoded bytes, which it decodes and loads as a Python dictionary:
+  ```python
+  message = json.loads(data.decode())
+  ```
+- The server then processes the message and sends responses back as JSON-encoded bytes, which **both clients** are able to decode and display.
+
+### Evidence from your code:
+- The Command-Line Client (ClassChatClient.py) and the GUI Client (ClassChatClient-GUI.py) both use the same protocol for sending and receiving messages.
+- The server does not check for client type; it only cares about the message format.
+
+### Exception:
+- The only issue that would prevent communication is if the server tries to call `.decode()` on a dictionary (as in your earlier bug). Once you fix those lines to use `json.dumps(message)` instead of `message.decode()`, **both clients will work**.
+
+---
+
+**Summary:**  
+The server is capable of communicating with both the Command-Line Client and the GUI Client, as long as the message encoding/decoding is handled correctly (i.e., always send/receive JSON-encoded bytes). Fixing the `.decode()` bug ensures compatibility with both clients.
+
+User: Will implementing the suggested solution impact the Server's ability to communicate with both client types?
+
+GitHub Copilot: **No, implementing the suggested solution will NOT negatively impact the server's ability to communicate with either the Command-Line Client or the GUI Client.**
+
+### Why?
+
+- **Both clients** (Command-Line and GUI) send and expect messages in the same format: JSON-encoded strings, sent as bytes.
+- The server should always:
+  - Parse incoming messages with `json.loads(data.decode())` (which you already do).
+  - When sending or broadcasting, convert Python dictionaries back to JSON strings with `json.dumps(message)` and then encode to bytes.
+- The bug was only that you tried to call `.decode()` on a dictionary, which is not valid for either client type.
+
+### The fix:
+Replace lines like:
+```python
+broadcast_message(message.decode(), connectionSocket)
+```
+with:
+```python
+broadcast_message(json.dumps(message), connectionSocket)
+```
+This ensures the server always sends a JSON string, which both clients can decode and process.
+
+---
+
+**Summary:**  
+- The fix is protocol-correct and will work for both clients.
+- There is no negative impact; in fact, it is required for both clients to work reliably.
+
+---
+

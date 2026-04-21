@@ -195,3 +195,18 @@ After this first implementation attempt, I asked Copilot to review my code and i
 VSCode identified 48 errors in the code, and so I had Copilot diagnose the cause.Most of these were annotation related errors, likely due to my inexperience with the library used. I iterated with asking Copilot for guidance/reviews and then implementing the suggested changes several times until all were resolved.
 
 Once this was done I tested the server and this new GUI Client to verify that the connection and communication were working properly, and that all features were still functional with the new GUI implementation. Below are screenshots of the testing of this feature:
+
+![alt text](image-5.png)
+![alt text](image-6.png)
+
+This was due to a bug that occured in the broadcasting protocol, which was fixed after a code review by Copilot. I then ran the test again, and this time it was successful! Below are screenshots of the successful testing of this feature as I tested and made fixes during tests:
+
+![alt text](image-7.png)
+![alt text](image-8.png)
+![alt text](image-9.png)
+![alt text](image-10.png)
+![alt text](image-11.png)
+![alt text](image-12.png)
+![alt text](image-13.png)
+![alt text](image-14.png)
+![alt text](image-15.png)

@@ -177,7 +177,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                         send_message_to_user(message.get("sender"), f"User '{receiver}' is not online. Message delivery failed.")
                         offline_messages.setdefault(receiver, []).append(message)
             elif message.get("type") == "broadcast":
-                broadcast_message(message.decode(), connectionSocket)
+                broadcast_message(json.dumps(message), connectionSocket)
                 # Store for offline users
                 for user in offline_messages:
                     if user not in client_dictionary:
@@ -190,34 +190,40 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                     else:
                         offline_messages.setdefault(receiver, []).append(message)
             elif message.get("type") == "encrypted":
-                session_key = client_session_keys.get(username)
-                if not session_key:
-                    connectionSocket.send(json.dumps({"status": "error", "text": "No session key found for user."}).encode())
+                sender = message.get("sender", username)
+                sender_session_key = client_session_keys.get(sender)
+                if not sender_session_key:
+                    connectionSocket.send(json.dumps({"status": "error", "text": "No session key found for sender."}).encode())
                     continue
                 try:
                     iv = base64.b64decode(message.get("iv"))
                     ciphertext = base64.b64decode(message.get("text"))
-                    cipher = Cipher(algorithms.AES(session_key), modes.CFB(iv))
+                    cipher = Cipher(algorithms.AES(sender_session_key), modes.CFB(iv))
                     decryptor = cipher.decryptor()
                     plaintext = decryptor.update(ciphertext) + decryptor.finalize()
-                    print(f"[Decrypted Message from {username}]: {plaintext.decode()}")
-                    # Broadcast the decrypted message to other users (encrypted for each recipient)
-                    for recipient, sock in client_dictionary.items():
-                        if recipient != username and recipient in client_session_keys:
-                            recipient_key = client_session_keys[recipient]
+
+                    # For each recipient, re-encrypt with their session key
+                    for user, sock in client_dictionary.items():
+                        if user == sender:
+                            continue
+                        recipient_key = client_session_keys.get(user)
+                        if not recipient_key:
+                            continue
+                        try:
                             new_iv = os.urandom(16)
                             cipher = Cipher(algorithms.AES(recipient_key), modes.CFB(new_iv))
                             encryptor = cipher.encryptor()
                             new_ciphertext = encryptor.update(plaintext) + encryptor.finalize()
-                            encrypted_msg = {
+                            sock.send(json.dumps({
                                 "type": "encrypted",
-                                "sender": username,
+                                "sender": sender,
                                 "iv": base64.b64encode(new_iv).decode(),
                                 "text": base64.b64encode(new_ciphertext).decode()
-                            }
-                            sock.send(json.dumps(encrypted_msg).encode())
-                except json.JSONDecodeError as e:
-                    print(f"[Error] Failed to decrypt message from {username}: {e}")
+                            }).encode())
+                        except Exception as e:
+                            print(f"[Warning] Failed to send encrypted message to {user}: {e}")
+                except Exception as e:
+                    print(f"[Error] Failed to decrypt message from {sender}: {e}")
                     continue
             elif message.get("type") == "disconnect":
                 print(f"Client {username}@{addr} exited intentionally.")
@@ -225,7 +231,7 @@ def handle_client(connectionSocket: socket, addr: Tuple[str, int]) -> None:
                 break  # Exit the loop to trigger cleanup
             else:
                 # If not intended for a specific person, broadcast message to all active users
-                broadcast_message(message.decode(), connectionSocket)
+                broadcast_message(json.dumps(message), connectionSocket)
 
     except json.JSONDecodeError as e:
         print(f"An error occurred while handling client {addr}: {e}") # Log any exceptions that occur while handling the client

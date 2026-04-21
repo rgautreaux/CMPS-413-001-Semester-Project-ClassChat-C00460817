@@ -44,7 +44,7 @@ def receive_messages(sock: socket) -> None:
                         with open(incoming_filename, "wb") as incoming_file_out:
                             incoming_file_out.write(base64.b64decode(incoming_filedata))
                         print(f"[System] File '{incoming_filename}' saved successfully.")
-                    except json.JSONDecodeError as e:
+                    except Exception as e:
                         print(f"[Error] Failed to save file: {e}")
                 elif save == "exit": # If the user types "exit", close the connection and exit the program
                     print("[System] Disconnecting from server...")
@@ -74,7 +74,7 @@ def receive_messages(sock: socket) -> None:
                 text = inc_msg.get("text", "")
                 print(f'\n{sender}: {text}')
             print("> ", end='', flush=True) # Always print prompt after message
-        except json.JSONDecodeError:
+        except Exception:
             # If the message cannot be parsed as JSON, print it as a regular message from the server
             print(f'\n{message.decode()}')
             print("> ", end='', flush=True)
@@ -200,7 +200,7 @@ while True:
         try:
             with open(file_name, "rb") as file_in:
                 file_data = base64.b64encode(file_in.read()).decode()
-        except json.JSONDecodeError as e:
+        except Exception as e:
             print(f"[Error] Could not read file: {e}")
             continue
         if file_data.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
