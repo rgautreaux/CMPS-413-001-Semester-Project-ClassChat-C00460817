@@ -10,8 +10,9 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 import tkinter as tk
 from tkinter import scrolledtext, filedialog, simpledialog, messagebox
 
-# --- Tkinter GUI Setup ---
+# ClassChat Client GUI Application
 class ClassChatClientGUI:
+    # GUI setup and socket initialization
     def __init__(self, master):
         self.master = master
         self.master.title("ClassChat Client")
@@ -41,6 +42,9 @@ class ClassChatClientGUI:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect(('localhost', 12000))
         self.username = simpledialog.askstring("Username", "Enter your username:", parent=self.master)
+        if not self.username:
+            self.master.destroy()
+            return
         self.sock.send(self.username.encode())
         # Key exchange
         srv_msg = self.sock.recv(4096)
@@ -63,11 +67,10 @@ class ClassChatClientGUI:
             self.master.destroy()
             return
         threading.Thread(target=self.receive_messages, daemon=True).start()
-
+# Broadcast message sending
     def send_message(self, event=None):
         msg = self.entry_message.get()
         if msg:
-            # Broadcast
             message_json = json.dumps({
                 "type": "broadcast",
                 "sender": self.username,
@@ -76,7 +79,7 @@ class ClassChatClientGUI:
             })
             self.sock.send(message_json.encode())
             self.entry_message.delete(0, tk.END)
-
+# Private message sending
     def send_private_message(self):
         recipient = simpledialog.askstring("Private Message", "Recipient username:", parent=self.master)
         if not recipient:
@@ -91,10 +94,9 @@ class ClassChatClientGUI:
             })
             self.sock.send(message_json.encode())
             self.entry_message.delete(0, tk.END)
-            
+# Message display handling
     def display_message(self, msg):
         self.chat_area.config(state=tk.NORMAL)
-        # Format message based on type
         if msg.get("type") == "group_message":
             display = f"[{msg['group']}] {msg['sender']}: {msg['text']}\n"
         elif msg.get("type") == "private_message":
@@ -113,8 +115,7 @@ class ClassChatClientGUI:
         self.chat_area.insert(tk.END, display)
         self.chat_area.config(state=tk.DISABLED)
         self.chat_area.see(tk.END)
-        self.master.after(0, lambda: self.display_message(msg))
-
+# Group command handling
     def group_command(self):
         command = simpledialog.askstring("Group Command", "Enter command (create/join/leave/list):", parent=self.master)
         group = simpledialog.askstring("Group Name", "Enter group name:", parent=self.master) if command in ["create", "join", "leave"] else ""
@@ -126,7 +127,7 @@ class ClassChatClientGUI:
                 "sender": self.username
             }
             self.sock.send(json.dumps(group_cmd).encode())
-
+# Group message sending
     def send_group_message(self):
         group = simpledialog.askstring("Group Name", "Enter group name:", parent=self.master)
         msg = self.entry_message.get()
@@ -139,7 +140,7 @@ class ClassChatClientGUI:
             }
             self.sock.send(json.dumps(group_msg).encode())
             self.entry_message.delete(0, tk.END)
-
+# File transfer
     def send_file(self):
         receiver = simpledialog.askstring("File Transfer", "Recipient username:", parent=self.master)
         file_path = filedialog.askopenfilename()
@@ -154,7 +155,7 @@ class ClassChatClientGUI:
                 "filedata": file_data
             }
             self.sock.send(json.dumps(file_msg).encode())
-
+# Offline message sending
     def send_offline_message(self):
         receiver = simpledialog.askstring("Offline Message", "Recipient username:", parent=self.master)
         msg = self.entry_message.get()
@@ -167,7 +168,7 @@ class ClassChatClientGUI:
             }
             self.sock.send(json.dumps(offline_msg).encode())
             self.entry_message.delete(0, tk.END)
-
+# Encrypted message sending
     def send_encrypted_message(self):
         msg = self.entry_message.get()
         if msg:
@@ -184,6 +185,21 @@ class ClassChatClientGUI:
             self.sock.send(json.dumps(encrypted_msg).encode())
             self.entry_message.delete(0, tk.END)
 
+# Thread to receive messages from server
+    def receive_messages(self):
+        while True:
+            try:
+                data = self.sock.recv(4096)
+                if not data:
+                    break
+                try:
+                    msg = json.loads(data.decode())
+                    self.master.after(0, lambda m=msg: self.display_message(m))
+                except Exception:
+                    self.master.after(0, lambda: self.display_message({"text": data.decode()}))
+            except Exception:
+                break
+# Cleanup on disconnect
     def disconnect(self):
         try:
             self.sock.send(json.dumps({"type": "disconnect"}).encode())
@@ -192,6 +208,7 @@ class ClassChatClientGUI:
             pass
         self.master.destroy()
 
+# Main application
 root = tk.Tk()
 app = ClassChatClientGUI(root)
 root.mainloop()
