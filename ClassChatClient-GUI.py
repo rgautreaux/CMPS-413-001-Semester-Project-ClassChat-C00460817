@@ -9,10 +9,12 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 import os
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 import tkinter as tk
-from tkinter import scrolledtext
+from tkinter import scrolledtext, filedialog, simpledialog, messagebox
 import threading
 import socket
 import json
+import base64
+import os
 
 ddef receive_messages():
     while True:
@@ -28,10 +30,6 @@ ddef receive_messages():
             chat_area.see(tk.END)
         except Exception:
             break
-
-
-
-
 
 serverName = 'localhost' #Server Name
 serverPort = 12000 #Port Number
@@ -67,247 +65,158 @@ else:
 
 
 # --- Tkinter GUI Setup ---
-def send_message():
-    msg = entry_message.get()
-    if msg:
-        # Example: send as plain text or JSON
-        client_socket.send(msg.encode())
-        entry_message.delete(0, tk.END)
+class ClassChatClientGUI:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("ClassChat Client")
+        self.chat_area = scrolledtext.ScrolledText(master, state=tk.DISABLED, width=60, height=20)
+        self.chat_area.pack(padx=10, pady=10)
+        self.entry_message = tk.Entry(master, width=40)
+        self.entry_message.pack(side=tk.LEFT, padx=(10,0), pady=(0,10))
+        self.entry_message.bind("<Return>", self.send_message)
+        self.send_button = tk.Button(master, text="Send", command=self.send_message)
+        self.send_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
+        # Add more buttons/menus for group, file, etc.
+        # Example: self.group_button = tk.Button(master, text="Group", command=self.group_command)
+        # self.group_button.pack(...)
 
-#Message Receiving Thread
-root = tk.Tk()
-root.title("ClassChat Client")
+        # Socket setup, encryption, etc.
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect(('localhost', 12000))
+        # ... (username, key exchange, etc.)
 
-chat_area = scrolledtext.ScrolledText(root, state=tk.DISABLED, width=50, height=20)
-chat_area.pack(padx=10, pady=10)
+        threading.Thread(target=self.receive_messages, daemon=True).start()
 
-entry_message = tk.Entry(root, width=40)
-entry_message.pack(side=tk.LEFT, padx=(10,0), pady=(0,10))
-entry_message.bind("<Return>", lambda event: send_message())
+    def send_message(self, event=None):
+        msg = self.entry_message.get()
+        if msg:
+            # Here, build the correct JSON for the message type
+            # Example: send a broadcast
+            message_json = json.dumps({
+                "type": "broadcast",
+                "sender": self.username,
+                "receiver": "all",
+                "text": msg
+            })
+            self.sock.send(message_json.encode())
+            self.entry_message.delete(0, tk.END)
 
-send_button = tk.Button(root, text="Send", command=send_message)
-send_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
+    def send_private_message(self):
+        recipient = simpledialog.askstring("Private Message", "Recipient username:", parent=self.master)
+        if not recipient:
+            return
+        msg = self.entry_message.get()
+        if msg:
+            message_json = json.dumps({
+                "type": "private_message",
+                "sender": self.username,
+                "receiver": recipient,
+                "text": msg
+            })
+            self.sock.send(message_json.encode())
+            self.entry_message.delete(0, tk.END)
 
-# Start the receiving thread
-threading.Thread(target=receive_messages, daemon=True).start()
+    def receive_messages(self):
+        while True:
+            try:
+                data = self.sock.recv(4096)
+                if not data:
+                    break
+                # Parse and display message
+                try:
+                    msg = json.loads(data.decode())
+                    # Format and display in chat_area
+                    self.display_message(msg)
+                except Exception:
+                    self.display_message({"text": data.decode()})
+            except Exception:
+                break
 
-root.mainloop()
+    def display_message(self, msg):
+        self.chat_area.config(state=tk.NORMAL)
+        # Format message based on type
+        if msg.get("type") == "group_message":
+            display = f"[{msg['group']}] {msg['sender']}: {msg['text']}\n"
+        elif msg.get("type") == "private_message":
+            display = f"[Private] {msg['sender']} to {msg['receiver']}: {msg['text']}\n"
+        elif msg.get("type") == "file_transfer":
+            display = f"[File] {msg['sender']} sent '{msg['filename']}'\n"
+            # Prompt to save file, etc.
+        else:
+            display = f"{msg.get('sender', '')}: {msg.get('text', '')}\n"
+        self.chat_area.insert(tk.END, display)
+        self.chat_area.config(state=tk.DISABLED)
+        self.chat_area.see(tk.END)
 
-while True:
-    print("To message a specific user, type '@username message'. To message all users, just type your message.")
-    print("Type 'exit' to disconnect from the server.")
-    msg_type = input('Message Type (Group, Private, File_Transfer, Offline_Message, Encrypted): ').strip() #User/Client Input for recipient of message
-    if not msg_type:
-        msg_type = "broadcast"
-    if msg_type.lower() == "group": #User/Client Input for group command or message
-        group_input = input('Group Command (Command or Message): ').strip()
-        if group_input.lower() == "command": #If the user wants to send a group command
-            command = input('Group Command (Create, Join, Leave, List): ').strip() #User/Client Input for group command type
-            if command.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-                print("[System] Disconnecting from server...")
-                disconnect_message = json.dumps({"type": "disconnect"})
-                clientSocket.send(disconnect_message.encode())
-                clientSocket.close()
-                sys.exit()
-            group_name = input('Group Name: ').strip() if command.lower() in ["create", "join", "leave"] else ""
-            if group_name.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-                print("[System] Disconnecting from server...")
-                disconnect_message = json.dumps({"type": "disconnect"})
-                clientSocket.send(disconnect_message.encode())
-                clientSocket.close()
-                sys.exit()
+    def group_command(self):
+        command = simpledialog.askstring("Group Command", "Enter command (create/join/leave/list):", parent=self.master)
+        group = simpledialog.askstring("Group Name", "Enter group name:", parent=self.master) if command in ["create", "join", "leave"] else ""
+        if command:
             group_cmd = {
                 "type": "group_command",
-                "command": command.lower(),
-                "group": group_name,
-                "sender": user_name
+                "command": command,
+                "group": group,
+                "sender": self.username
             }
-            clientSocket.send(json.dumps(group_cmd).encode())
-            continue 
-        elif group_input.lower() == "message": #If the user wants to send a group message
-            group_name = input('Group Name: ').strip()
-            if group_name.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-                print("[System] Disconnecting from server...")
-                disconnect_message = json.dumps({"type": "disconnect"})
-                clientSocket.send(disconnect_message.encode())
-                clientSocket.close()
-                sys.exit()
-            group_message = input('Group Message: ').strip() #User/Client Input for group message text
-            if group_message.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-                print("[System] Disconnecting from server...")
-                disconnect_message = json.dumps({"type": "disconnect"})
-                clientSocket.send(disconnect_message.encode())
-                clientSocket.close()
-                sys.exit()
+            self.sock.send(json.dumps(group_cmd).encode())
+
+    def send_group_message(self):
+        group = simpledialog.askstring("Group Name", "Enter group name:", parent=self.master)
+        msg = self.entry_message.get()
+        if group and msg:
             group_msg = {
                 "type": "group_message",
-                "group": group_name,
-                "sender": user_name,
-                "text": group_message
+                "group": group,
+                "sender": self.username,
+                "text": msg
             }
-            clientSocket.send(json.dumps(group_msg).encode())
-            continue
-        elif group_input.lower() == "exit": #If the user wants to exit now, let them exit
-            print("[System] Disconnecting from server...")
-            disconnect_message = json.dumps({"type": "disconnect"})
-            clientSocket.send(disconnect_message.encode())
-            clientSocket.close()
-            sys.exit()
-    elif msg_type.lower() == "file_transfer":
-        receiver = input('To (username): ').strip() #User/Client Input for recipient of file
-        if not receiver:
-            continue
-        elif receiver.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-            print("[System] Disconnecting from server...")
-            disconnect_message = json.dumps({"type": "disconnect"})
-            clientSocket.send(disconnect_message.encode())
-            clientSocket.close()
-            sys.exit()
-        file_name = input('Filename: ').strip() #User/Client Input for filename if message type is file transfer
-        if not file_name:
-            continue
-        elif file_name.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-            print("[System] Disconnecting from server...")
-            disconnect_message = json.dumps({"type": "disconnect"})
-            clientSocket.send(disconnect_message.encode())
-            clientSocket.close()
-            sys.exit()
-        try:
-            with open(file_name, "rb") as file_in:
-                file_data = base64.b64encode(file_in.read()).decode()
-        except Exception as e:
-            print(f"[Error] Could not read file: {e}")
-            continue
-        if file_data.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-            print("[System] Disconnecting from server...")
-            disconnect_message = json.dumps({"type": "disconnect"})
-            clientSocket.send(disconnect_message.encode())
-            clientSocket.close()
-            sys.exit()
-        file_msg = {
-            "type": "file_transfer",
-            "sender": user_name,
-            "receiver": receiver,
-            "filename": file_name,
-            "filedata": file_data
-        }
-        clientSocket.send(json.dumps(file_msg).encode())
-        continue
-    elif msg_type.lower() == "offline_message":
-        receiver = input('To (username): ').strip() # Prompt for recipient
-        if not receiver:
-            continue
-        elif receiver.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-            print("[System] Disconnecting from server...")
-            disconnect_message = json.dumps({"type": "disconnect"})
-            clientSocket.send(disconnect_message.encode())
-            clientSocket.close()
-            sys.exit()
-        offline_message = input('Offline Message: ').strip() #User/Client Input for offline message if message type is offline message
-        if not offline_message:
-            continue
-        elif offline_message.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-            print("[System] Disconnecting from server...")
-            disconnect_message = json.dumps({"type": "disconnect"})
-            clientSocket.send(disconnect_message.encode())
-            clientSocket.close()
-            sys.exit()
-        offline_msg = {
-            "type": "offline_message",
-            "sender": user_name,
-            "receiver": receiver,
-            "text": offline_message
-        }
-        clientSocket.send(json.dumps(offline_msg).encode())
-        continue
-    elif msg_type.lower() == "encrypted":
-        plaintext = input('Encrypted Message: ').strip()
-        if not plaintext:
-            continue
-        if plaintext.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-            print("[System] Disconnecting from server...")
-            disconnect_message = json.dumps({"type": "disconnect"})
-            clientSocket.send(disconnect_message.encode())
-            clientSocket.close()
-            sys.exit()
-        iv_val = os.urandom(16)
-        cipher_obj = Cipher(algorithms.AES(session_key), modes.CFB(iv_val))
-        encryptor = cipher_obj.encryptor()
-        ciphertext = encryptor.update(plaintext.encode()) + encryptor.finalize()
-        encrypted_msg = {
-            "type": "encrypted",
-            "sender": user_name,
-            "iv": base64.b64encode(iv_val).decode(),
-            "text": base64.b64encode(ciphertext).decode()
-        }
-        clientSocket.send(json.dumps(encrypted_msg).encode())
-        continue
-    elif msg_type.lower() == "private":
-        receiver = input('To (username): ').strip() #User/Client Input for recipient of message
-        if not receiver:
-            continue
-        elif receiver.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-            print("[System] Disconnecting from server...")
-            disconnect_message = json.dumps({"type": "disconnect"})
-            clientSocket.send(disconnect_message.encode())
-            clientSocket.close()
-            sys.exit()
-        message_text = input('Message: ').strip() #User/Client Input for message to send
-        if not message_text:
-            continue
-        elif message_text.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-            print("[System] Disconnecting from server...")
-            disconnect_message = json.dumps({"type": "disconnect"})
-            clientSocket.send(disconnect_message.encode())
-            clientSocket.close()
-            sys.exit()
-        private_msg = {
-            "type": "private_message",
-            "sender": user_name,
-            "receiver": receiver,
-            "text": message_text
-        }
-        clientSocket.send(json.dumps(private_msg).encode())
-        continue
-    elif msg_type.lower() == "broadcast":
-        receiver = input('To (username or "all"): ').strip() #User/Client Input for recipient of message
-        if not receiver:
-            receiver = "all"
-        elif receiver.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-            print("[System] Disconnecting from server...")
-            disconnect_message = json.dumps({"type": "disconnect"})
-            clientSocket.send(disconnect_message.encode())
-            clientSocket.close()
-            sys.exit()
-        message_text = input('Message: ').strip() #User/Client Input for message to send
-        if not message_text:
-            continue
-        elif message_text.strip().lower() == "exit": # If the user types "exit", close the connection and exit the program
-            print("[System] Disconnecting from server...")
-            disconnect_message = json.dumps({"type": "disconnect"})
-            clientSocket.send(disconnect_message.encode())
-            clientSocket.close()
-            sys.exit()
-        msg = {
-            "type": "broadcast",
-            "sender": user_name,
-            "receiver": "all",
-            "text": message_text
-        }
-        clientSocket.send(json.dumps(msg).encode())
-        continue
-    elif msg_type.strip().lower() == "exit": # If the user types "exit" at the message type prompt, close the connection and exit the program
-        print("[System] Disconnecting from server...")
-        disconnect_message = json.dumps({"type": "disconnect"})
-        clientSocket.send(disconnect_message.encode())
-        clientSocket.close()
-        sys.exit()
+            self.sock.send(json.dumps(group_msg).encode())
+            self.entry_message.delete(0, tk.END)
 
-def send_group_message_to_user(group: str, sender: str, message: str):
-    group_message_obj = {
-        "type": "group_message",
-        "group": group,
-        "sender": sender,
-        "text": message
-    }
-    clientSocket.send(json.dumps(group_message_obj).encode())
+    def send_file(self):
+        receiver = simpledialog.askstring("File Transfer", "Recipient username:", parent=self.master)
+        file_path = filedialog.askopenfilename()
+        if receiver and file_path:
+            with open(file_path, "rb") as f:
+                file_data = base64.b64encode(f.read()).decode()
+            file_msg = {
+                "type": "file_transfer",
+                "sender": self.username,
+                "receiver": receiver,
+                "filename": os.path.basename(file_path),
+                "filedata": file_data
+            }
+            self.sock.send(json.dumps(file_msg).encode())
+
+    def send_offline_message(self):
+        receiver = simpledialog.askstring("Offline Message", "Recipient username:", parent=self.master)
+        msg = self.entry_message.get()
+        if receiver and msg:
+            offline_msg = {
+                "type": "offline_message",
+                "sender": self.username,
+                "receiver": receiver,
+                "text": msg
+            }
+            self.sock.send(json.dumps(offline_msg).encode())
+            self.entry_message.delete(0, tk.END)
+
+    def send_encrypted_message(self):
+        msg = self.entry_message.get()
+        if msg:
+            iv_val = os.urandom(16)
+            cipher_obj = Cipher(algorithms.AES(self.session_key), modes.CFB(iv_val))
+            encryptor = cipher_obj.encryptor()
+            ciphertext = encryptor.update(msg.encode()) + encryptor.finalize()
+            encrypted_msg = {
+                "type": "encrypted",
+                "sender": self.username,
+                "iv": base64.b64encode(iv_val).decode(),
+                "text": base64.b64encode(ciphertext).decode()
+            }
+            self.sock.send(json.dumps(encrypted_msg).encode())
+            self.entry_message.delete(0, tk.END)
+
+root = tk.Tk()
+app = ClassChatClientGUI(root)
+root.mainloop()
