@@ -110,6 +110,8 @@ class ClassChatClientGUI:
             if save_path:
                 with open(save_path, "wb") as f:
                     f.write(base64.b64decode(msg['filedata']))  # type: ignore
+        elif msg.get("type") == "offline_message":
+            display = f"[Offline] {msg['sender']} to {msg['receiver']}: {msg['text']}\n"
         else:
             display = f"{msg.get('sender', '')}: {msg.get('text', '')}\n"
         self.chat_area.insert(tk.END, display)
