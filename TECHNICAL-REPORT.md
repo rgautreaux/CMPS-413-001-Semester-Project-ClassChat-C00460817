@@ -228,3 +228,9 @@ I did my best to implement the necessary fixes manually, but when I really hit t
 ![alt text](image-24.png)
 ![alt text](image-25.png)
 ![alt text](image-26.png)
+
+The last thing left to do now that mandatory features and most bonus features are implemented and working is to make sure that the `TRANSCRIPT.md` file is fully updated to document the exact usage of Github Copilot to help identify these issues and find their resolutions for full transparency. I also want to make sure that all screenshots of testing and error diagnosing are included in the `evidence-screenshots` folder, and begin working on the mandatory README.md file as described in the instructions.
+
+---
+
+# 8 README.md Creation and Final Touches
