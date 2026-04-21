@@ -1,4 +1,4 @@
-from socket import socket
+import socket
 import threading
 import json
 import base64
@@ -9,20 +9,6 @@ import os
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 import tkinter as tk
 from tkinter import scrolledtext, filedialog, simpledialog, messagebox
-
-def receive_messages():
-    while True:
-        try:
-            data = client_socket.recv(1024)
-            if not data:
-                break
-            msg = json.loads(data.decode())
-            chat_area.config(state=tk.NORMAL)
-            chat_area.insert(tk.END, data.decode() + '\n')
-            chat_area.config(state=tk.DISABLED)
-            chat_area.see(tk.END)
-        except Exception:
-            break
 
 # --- Tkinter GUI Setup ---
 class ClassChatClientGUI:
@@ -48,6 +34,8 @@ class ClassChatClientGUI:
         self.offline_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
         self.encrypted_button = tk.Button(master, text="Encrypted Send", command=self.send_encrypted_message)
         self.encrypted_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
+        self.disconnect_button = tk.Button(master, text="Disconnect", command=self.disconnect)
+        self.disconnect_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
 
         # Socket setup, encryption, etc.
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -125,6 +113,7 @@ class ClassChatClientGUI:
         self.chat_area.insert(tk.END, display)
         self.chat_area.config(state=tk.DISABLED)
         self.chat_area.see(tk.END)
+        self.master.after(0, lambda: self.display_message(msg))
 
     def group_command(self):
         command = simpledialog.askstring("Group Command", "Enter command (create/join/leave/list):", parent=self.master)
