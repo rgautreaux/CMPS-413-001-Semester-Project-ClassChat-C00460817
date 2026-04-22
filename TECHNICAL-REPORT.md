@@ -174,11 +174,11 @@ After making these adjustments, additional Pylance and Python errors were identi
 
 Once no more errors were identified by the editor, I ran the server and client again to test if the connection and communication were fully repaired and would work properly. I was finally able to successfully test the added Bonus Features, and all that I tested were successful! The following results occured:
 
-![alt text](image.png)
-![alt text](image-1.png)
-![alt text](image-2.png)
-![alt text](image-3.png)
-![alt text](image-4.png)
+![alt text](evidence-screenshots/ErrorFix1.png.png)
+![alt text](evidence-screenshots/ErrorFix2.png.png)
+![alt text](evidence-screenshots/ErrorFix3.png.png)
+![alt text](evidence-screenshots/ErrorFix4.png.png)
+![alt text](evidence-screenshots/ErrorFix5.png.png)
 
 ---
 
@@ -186,7 +186,7 @@ Once no more errors were identified by the editor, I ran the server and client a
 
 Seeing as how the instructions for this project mentioned that, while not required, a GUI Window would be highly encouraged for us to add.  Thus, I asked Copilot what the best method was to do this, and it recommended the `tkinter` library.  It said this would be easiest to add to the existing Python Codebase, and safest out of its three recommendations to not damage or break the exsisting codebase. I worked hard to make sure that the existing Server and Client worked, and did not want to risk any more errors or problems.  
 
-However, I was unfamiliar with `tkinter`, and thus asked for guidance andexamples of how to integrate the library with my exsisting Client. It provided me with a general overview of how to do this, and then I used the provided examples to manually adjust a new `ClassChatClient-GUI.py` file to implement these changes. I made a duplicate Client File instead of adding this feature to the existing one to avoid any conflicts. If this GUI implementation went sideways and caused more problems than improvements, then my original Command Line Client would still be intact and functional.
+However, I was unfamiliar with `tkinter`, and thus asked for guidance and examples of how to integrate the library with my exsisting Client. It provided me with a general overview of how to do this, and then I used the provided examples to manually adjust a new `ClassChatClient-GUI.py` file to implement these changes. I made a duplicate Client File instead of adding this feature to the existing one to avoid any conflicts. If this GUI implementation went sideways and caused more problems than improvements, then my original Command Line Client would still be intact and functional.
 
 My first attempt at implementing the GUI was rough, and caused many errors in the code itself. I was unsure of exactly how to replace the Command Line prompts, inputs, and functions with this new and unfamiliar library. This resulted in me asking Copilot for a more extensive guide on how to integrate this library with the existing Client codebase.  From there, it game me a more exact and detailed example of how to refactor the exsising code into a GUI implementation. I used this example, as I have before, to implement adjustments within this new `ClassChatClient-GUI.py` file. First I tried to perform the refactoring to replace the Command Line prompts and inputs with the GUI elements, and then I tried to re-adapt the required and bonus features for the GUI.
 
@@ -196,38 +196,44 @@ VSCode identified 48 errors in the code, and so I had Copilot diagnose the cause
 
 Once this was done I tested the server and this new GUI Client to verify that the connection and communication were working properly, and that all features were still functional with the new GUI implementation. Below are screenshots of the testing of this feature:
 
-![alt text](image-5.png)
-![alt text](image-6.png)
+![alt text](evidence-screenshots/GUI_ProtocolBug1.png)
+![alt text](evidence-screenshots/GUI_ProtocolBug2.png)
 
 This was due to a bug that occured in the broadcasting protocol, which was fixed after a code review by Copilot. I then ran the test again, and this time it was successful! Below are screenshots of the successful testing of this feature as I tested and made fixes during tests (such as the broadcasting bug and Offline messaging issues). All these features are now successfully working within the Command Line and GUI implementation:
 
-![alt text](image-7.png)
-![alt text](image-8.png)
-![alt text](image-9.png)
-![alt text](image-10.png)
-![alt text](image-11.png)
-![alt text](image-12.png)
-![alt text](image-13.png)
-![alt text](image-14.png)
-![alt text](image-15.png)
-![alt text](image-16.png)
-![alt text](image-17.png)
-![alt text](image-18.png)
-![alt text](image-19.png)
-![alt text](image-20.png)
-![alt text](image-21.png)
-![alt text](image-27.png)
-![alt text](image-28.png)
-![alt text](image-29.png)
-![alt text](image-30.png)
+## Command Line Client:
+![alt text](evidence-screenshots/Final_CommandLine1.png)
+![alt text](evidence-screenshots/Final_CommandLine2.png)
+![alt text](evidence-screenshots/Final_CommandLine3.png)
+![alt text](evidence-screenshots/Final_CommandLine4.png)
+
+# GUI Client:
+![alt text](evidence-screenshots/Final_PrivateMessage1.png)
+![alt text](evidence-screenshots/Final_PrivateMessage2.png)
+
+![alt text](evidence-screenshots/Final_CreateGroup.png)
+![alt text](evidence-screenshots/Final_JoinGroup.png)
+![alt text](evidence-screenshots/Final_GroupMessage1.png)
+![alt text](evidence-screenshots/Final_GroupMessage2.png)
+
+![alt text](evidence-screenshots/Final_OfflineMessage1.png)
+![alt text](evidence-screenshots/Final_OfflineMessage2.png)
+![alt text](evidence-screenshots/Final_OfflineandPrivate.png)
+
+![alt text](evidence-screenshots/Final_EncryptedMessage1.png)
+![alt text](evidence-screenshots/Final_EncryptedMessage2.png)
+![alt text](evidence-screenshots/Final_EncryptedMessage3.png)
+![alt text](evidence-screenshots/Final_EncryptedMessage4.png)
+![alt text](evidence-screenshots/Final_EncryptedMessage5.png)
+![alt text](evidence-screenshots/Final_EncryptedMessage6.png)
 
 I did my best to implement the necessary fixes manually, but when I really hit the wall and had attempted to fix the same issue several times with no success, I allowed the editor to make changes to the specific sections that were still causing errors after my manual adjustments, and resolved most of the features that needed fixing. The only feature I was not able to get working was the File Transfer feature, which I attempted to fix manually several times with no success. I then allowed the editor to make changes to the specific sections that were still not working after my manual adjustments, and this still left the File Transfer Feature inoperable. It would allow files to be sent, but the recipiant would not recieve the file transfered (nor recieve any kind of notification, error message, etc.). As it is a Bonus Feature and not Required, I decided to leave it as is and not risk breaking any of the other features that were working properly to try to fix this one. Below are screenshots of the testing of this feature, despite my efforts to fix it:
 
-![alt text](image-22.png)
-![alt text](image-23.png)
-![alt text](image-24.png)
-![alt text](image-25.png)
-![alt text](image-26.png)
+![alt text](evidence-screenshots/Final_FileTransfer1.png)
+![alt text](evidence-screenshots/Final_FileTransfer2.png)
+![alt text](evidence-screenshots/Final_FileTransfer3.png)
+![alt text](evidence-screenshots/Final_FileTransfer4.png)
+![alt text](evidence-screenshots/Final_FileTransfer5.png)
 
 The last thing left to do now that mandatory features and most bonus features are implemented and working is to make sure that the `TRANSCRIPT.md` file is fully updated to document the exact usage of Github Copilot to help identify these issues and find their resolutions for full transparency. I also want to make sure that all screenshots of testing and error diagnosing are included in the `evidence-screenshots` folder, and begin working on the mandatory README.md file as described in the instructions.
 
