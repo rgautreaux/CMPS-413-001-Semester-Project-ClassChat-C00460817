@@ -240,3 +240,7 @@ The last thing left to do now that mandatory features and most bonus features ar
 ---
 
 # 8 README.md Creation and Final Touches
+
+To make sure I wrote a comprehensive, informative, and helpful README.md file, I looked for an guide for what criteria constitutes a good README.md file.  In my search I found this article on the subject: https://www.freecodecamp.org/news/how-to-write-a-good-readme-file/ , which provided a breakdown of what content should be included for a good README.md file.
+
+I used each of its paragraph sections as a mental checklist as I wrote my README.md file, in order to make sure I was including all necessary information. As I wrote the instructions for how to run the client and server, as well as how to use the various features, I performed the steps as I wrote them to guaranteed accurate, comprehensive instructions. I also included screenshots from my Final Test of the project to provide visual aids for users to understand what they should be seeing at each step. Once the README.md was completed, all Instruction Criteria were met, and no errors or issues were occuring during this final testing phase, I was ready to submit the project.

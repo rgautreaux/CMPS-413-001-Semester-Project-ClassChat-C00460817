@@ -119,9 +119,8 @@ else:
 #Message Receiving Thread
 threading.Thread(target=receive_messages, args=(clientSocket,), daemon=True).start() #Start thread to receive server messages
 while True:
-    print("To message a specific user, type '@username message'. To message all users, just type your message.")
     print("Type 'exit' to disconnect from the server.")
-    msg_type = input('Message Type (Group, Private, File_Transfer, Offline_Message, Encrypted): ').strip() #User/Client Input for recipient of message
+    msg_type = input('Message Type (Broadcast, Group, Private, File_Transfer, Offline_Message, Encrypted): ').strip() #User/Client Input for recipient of message
     if not msg_type:
         msg_type = "broadcast"
     if msg_type.lower() == "group": #User/Client Input for group command or message
